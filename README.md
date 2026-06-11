@@ -44,8 +44,11 @@ job-explain-copilot/
 │   ├── package.json            # 前端依赖
 │   └── public/index.html       # HTML 模板
 ├── docs/
+│   ├── index.html              # GitHub Pages 展示页
 │   ├── demo-data.md            # 演示数据（与 backend/api/demo.py 同步）
-│   └── deploy-checklist.md     # 部署检查清单
+│   ├── deploy-checklist.md     # 部署检查清单
+│   └── deploy-guide.md         # GitHub + Vercel + Railway 部署方案
+├── vercel.json                 # Vercel 单仓库部署配置
 ├── .env.example                # 环境变量模板
 └── README.md                   # 项目说明
 ```
@@ -92,3 +95,13 @@ npm start
 | demo_03 | 张伟 | 硬件测试工程师 | 78 | 产品经理 | 40 |
 
 > 详细的场景数据 JSON 请查看 [`docs/demo-data.md`](./docs/demo-data.md)
+
+## 远程部署
+
+完整的远程部署方案请参见 [`docs/deploy-guide.md`](./docs/deploy-guide.md)（GitHub + Railway + Vercel）。
+
+### 一键部署
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/tianyuan98/job-explain-copilot&root-directory=frontend&env=REACT_APP_API_URL&envDescription=后端%20API%20地址)
+
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new/template?template=https://github.com/tianyuan98/job-explain-copilot&envs=LLM_API_KEY,LLM_BASE_URL,LLM_MODEL)
