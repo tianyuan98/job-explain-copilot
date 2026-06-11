@@ -40,6 +40,17 @@
 
 ---
 
+## GitHub 远程部署
+
+- [ ] GitHub 仓库创建并推送代码
+- [ ] Railway 导入项目，配置环境变量（LLM_API_KEY / LLM_BASE_URL / LLM_MODEL），启动后端
+- [ ] Vercel 导入项目，配置前端环境变量（REACT_APP_API_URL），发布
+- [ ] 浏览器访问 Vercel 域名测试所有场景
+
+> 详细部署步骤请参见 [`docs/deploy-guide.md`](./deploy-guide.md)
+
+---
+
 ## 待补充
 
 <!-- 后续根据实际部署情况补充更多检查项 -->
