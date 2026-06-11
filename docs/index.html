@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI定岗解释官 Demo</title>
+<style>
+  :root {
+    --bg: #f8f9fb;
+    --card: #ffffff;
+    --text: #1a1a2e;
+    --text-secondary: #555770;
+    --border: #e4e6ed;
+    --accent: #0052d9;
+    --accent-light: #e8f0fe;
+    --green: #00a870;
+    --orange: #ed7b2f;
+    --purple: #7b3fe4;
+    --radius: 12px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .hero {
+    background: linear-gradient(135deg, #0052d9 0%, #366ef4 50%, #618dff 100%);
+    color: #fff;
+    padding: 56px 24px 48px;
+    text-align: center;
+  }
+  .hero h1 { font-size: 2.4rem; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 8px; }
+  .hero .subtitle { font-size: 1.1rem; opacity: 0.85; margin-bottom: 24px; }
+  .hero .badge-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .badge {
+    display: inline-block;
+    padding: 4px 14px;
+    border-radius: 100px;
+    font-size: 0.82rem;
+    font-weight: 500;
+    background: rgba(255,255,255,0.18);
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(255,255,255,0.2);
+  }
+
+  .container { max-width: 960px; margin: 0 auto; padding: 32px 20px 64px; }
+
+  .section { margin-bottom: 32px; }
+  .section-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-title .icon { font-size: 1.4rem; }
+
+  /* Feature Cards */
+  .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+  .feature-card { background: var(--card); border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow); border: 1px solid var(--border); }
+  .feature-card h3 { font-size: 1rem; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+  .feature-card p { font-size: 0.9rem; color: var(--text-secondary); }
+
+  /* Tech Stack */
+  .tech-table { width: 100%; border-collapse: separate; border-spacing: 0; background: var(--card); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); border: 1px solid var(--border); }
+  .tech-table th, .tech-table td { padding: 12px 16px; text-align: left; font-size: 0.9rem; }
+  .tech-table th { background: var(--accent-light); color: var(--accent); font-weight: 600; }
+  .tech-table td { border-top: 1px solid var(--border); }
+
+  /* Demo Scenarios */
+  .demo-table { width: 100%; border-collapse: separate; border-spacing: 0; background: var(--card); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); border: 1px solid var(--border); }
+  .demo-table th, .demo-table td { padding: 10px 14px; text-align: left; font-size: 0.88rem; }
+  .demo-table th { background: var(--accent-light); color: var(--accent); font-weight: 600; white-space: nowrap; }
+  .demo-table td { border-top: 1px solid var(--border); }
+  .demo-table tr:hover td { background: #f5f7fa; }
+  .score-high { color: var(--green); font-weight: 700; }
+  .score-mid { color: var(--orange); font-weight: 600; }
+  .score-low { color: #e34d59; font-weight: 600; }
+
+  /* Checklist */
+  .checklist { list-style: none; }
+  .checklist li {
+    padding: 12px 16px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: var(--shadow);
+  }
+  .checklist li::before {
+    content: "\2610";  /* unchecked box */
+    font-size: 1.2rem;
+    color: var(--accent);
+    flex-shrink: 0;
+  }
+  .checklist code {
+    background: var(--accent-light);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 0.85em;
+    color: var(--accent);
+  }
+
+  /* Scenario Detail */
+  .scenario-detail {
+    background: var(--card);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+  .scenario-header {
+    background: var(--accent-light);
+    padding: 14px 20px;
+    font-weight: 700;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .scenario-body { padding: 20px; }
+  .scenario-body table { width: 100%; font-size: 0.85rem; }
+  .scenario-body table td { padding: 6px 8px; vertical-align: top; }
+  .scenario-body table td:first-child { font-weight: 600; color: var(--text-secondary); width: 130px; white-space: nowrap; }
+  .tag { display: inline-block; background: #f0f0f5; color: #666; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; margin: 2px 4px 2px 0; }
+  .tag-green { background: #e6f7ee; color: var(--green); }
+  .tag-red { background: #fde8ec; color: #e34d59; }
+
+  .json-block {
+    background: #1e1e2e;
+    color: #cdd6f4;
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    font-size: 0.82rem;
+    line-height: 1.6;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-family: "SF Mono", "Fira Code", "Cascadia Code", monospace;
+  }
+  .json-block .key { color: #89b4fa; }
+  .json-block .string { color: #a6e3a1; }
+  .json-block .number { color: #fab387; }
+
+  /* Structure Tree */
+  .tree { font-family: "SF Mono", "Fira Code", "Cascadia Code", monospace; font-size: 0.85rem; background: var(--card); border-radius: var(--radius); padding: 20px 24px; border: 1px solid var(--border); box-shadow: var(--shadow); white-space: pre; overflow-x: auto; line-height: 1.8; }
+  .tree .dir { color: var(--accent); font-weight: 600; }
+  .tree .file { color: var(--text-secondary); }
+  .tree .comment { color: #999; }
+
+  footer {
+    text-align: center;
+    padding: 32px 20px;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    border-top: 1px solid var(--border);
+  }
+
+  @media (max-width: 640px) {
+    .hero h1 { font-size: 1.8rem; }
+    .hero .subtitle { font-size: 0.95rem; }
+    .container { padding: 20px 12px 40px; }
+    .demo-table { font-size: 0.78rem; }
+    .demo-table th, .demo-table td { padding: 8px 6px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Hero -->
+<div class="hero">
+  <h1>🤖 AI定岗解释官 Demo</h1>
+  <p class="subtitle">面向 HR 校招场景的智能定岗辅助工具 · 基于 LLM 大模型</p>
+  <div class="badge-row">
+    <span class="badge">Python FastAPI</span>
+    <span class="badge">React</span>
+    <span class="badge">LLM 驱动</span>
+    <span class="badge">全栈 Web 应用</span>
+  </div>
+</div>
+
+<div class="container">
+
+<!-- 项目介绍 -->
+<div class="section">
+  <div class="section-title"><span class="icon">&#x1F4CB;</span> 项目介绍</div>
+  <p style="margin-bottom:16px;color:var(--text-secondary);">
+    <strong>AI定岗解释官</strong> 为候选人提供智能定岗解读服务，覆盖三大核心场景：
+  </p>
+  <div class="features">
+    <div class="feature-card">
+      <h3>&#x1F3AF; 定岗匹配解释</h3>
+      <p>根据算法排名、实习经历、系统设计得分和职业兴趣，解释系统推荐岗位的匹配逻辑</p>
+    </div>
+    <div class="feature-card">
+      <h3>&#x1F504; 换岗成长建议</h3>
+      <p>当候选人偏好其他岗位时，分析能力差距并给出非线性成长路径建议</p>
+    </div>
+    <div class="feature-card">
+      <h3>&#x1F4DD; 申诉报告生成</h3>
+      <p>候选人对定岗结果有异议时，自动生成结构化的申诉陈述报告</p>
+    </div>
+  </div>
+</div>
+
+<!-- 技术栈 -->
+<div class="section">
+  <div class="section-title"><span class="icon">&#x1F6E0;</span> 技术栈</div>
+  <table class="tech-table">
+    <tr><th>层级</th><th>技术</th></tr>
+    <tr><td>后端框架</td><td>Python (FastAPI)</td></tr>
+    <tr><td>前端框架</td><td>React</td></tr>
+    <tr><td>AI 能力</td><td>LLM 大模型服务（智谱 GLM / 兼容 OpenAI 接口）</td></tr>
+    <tr><td>运行时</td><td>Node.js + Python 3.10+</td></tr>
+  </table>
+</div>
+
+<!-- 项目结构 -->
+<div class="section">
+  <div class="section-title"><span class="icon">&#x1F4C1;</span> 项目结构</div>
+  <div class="tree"><span class="dir">job-explain-copilot/</span>
+<span class="dir">├── backend/</span>
+<span class="dir">│   ├── </span><span class="file">main.py</span>                 <span class="comment"># 应用入口</span>
+<span class="dir">│   ├── </span><span class="file">requirements.txt</span>        <span class="comment"># Python 依赖</span>
+<span class="dir">│   ├── services/</span>
+<span class="dir">│   │   ├── </span><span class="file">llm_service.py</span>      <span class="comment"># LLM 服务层</span>
+<span class="dir">│   │   └── </span><span class="file">explain_service.py</span>  <span class="comment"># 解释业务逻辑</span>
+<span class="dir">│   └── api/</span>
+<span class="dir">│       └── </span><span class="file">demo.py</span>             <span class="comment"># Demo API（3组场景数据）</span>
+<span class="dir">├── frontend/</span>
+<span class="dir">│   ├── src/</span>
+<span class="dir">│   │   ├── </span><span class="file">App.js</span>              <span class="comment"># React 应用入口</span>
+<span class="dir">│   │   ├── pages/</span>
+<span class="dir">│   │   │   └── </span><span class="file">DemoPage.js</span>     <span class="comment"># 演示页面</span>
+<span class="dir">│   │   └── components/</span>
+<span class="dir">│   │       ├── </span><span class="file">ExplainCard.js</span>  <span class="comment"># 解释卡片组件</span>
+<span class="dir">│   │       └── </span><span class="file">ScenarioSelector.js</span>  <span class="comment"># 场景选择器</span>
+<span class="dir">│   ├── </span><span class="file">package.json</span>            <span class="comment"># 前端依赖</span>
+<span class="dir">│   └── public/</span><span class="file">index.html</span>
+<span class="dir">├── docs/</span>
+<span class="dir">│   ├── </span><span class="file">index.html</span>              <span class="comment"># 项目展示页（本页）</span>
+<span class="dir">│   ├── </span><span class="file">demo-data.md</span>            <span class="comment"># 演示数据（与 demo.py 同步）</span>
+<span class="dir">│   └── </span><span class="file">deploy-checklist.md</span>    <span class="comment"># 部署检查清单</span>
+<span class="dir">├── </span><span class="file">.env.example</span>
+<span class="dir">└── </span><span class="file">README.md</span></div>
+</div>
+
+<!-- 演示场景 -->
+<div class="section">
+  <div class="section-title"><span class="icon">&#x1F3AC;</span> 演示场景</div>
+  <table class="demo-table">
+    <thead>
+      <tr><th>场景 ID</th><th>候选人</th><th>推荐岗位</th><th>匹配分</th><th>偏好岗位</th><th>偏好匹配分</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>demo_01</code></td>
+        <td>李明</td>
+        <td>云计算研发工程师</td>
+        <td class="score-high">87</td>
+        <td>AI算法工程师</td>
+        <td class="score-mid">72</td>
+      </tr>
+      <tr>
+        <td><code>demo_02</code></td>
+        <td>王婷</td>
+        <td>前端开发工程师</td>
+        <td class="score-high">82</td>
+        <td>数据科学工程师</td>
+        <td class="score-mid">55</td>
+      </tr>
+      <tr>
+        <td><code>demo_03</code></td>
+        <td>张伟</td>
+        <td>硬件测试工程师</td>
+        <td class="score-mid">78</td>
+        <td>产品经理</td>
+        <td class="score-low">40</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- 场景详情 -->
+<div class="section">
+  <div class="section-title"><span class="icon">&#x1F4CA;</span> 场景详情数据</div>
+
+  <!-- demo_01 -->
+  <div class="scenario-detail">
+    <div class="scenario-header">&#x1F9D1;&#x200D;&#x1F4BB; demo_01 · 李明 — 云计算研发工程师 <span style="font-weight:400;color:var(--green);">匹配分 87</span></span></div>
+    <div class="scenario-body">
+      <table>
+        <tr><td>算法排名</td><td>前15%</td></tr>
+        <tr><td>实习经历</td><td>云原生后端开发</td></tr>
+        <tr><td>系统设计得分</td><td>85</td></tr>
+        <tr><td>职业兴趣</td><td>后端开发、分布式、容器化</td></tr>
+        <tr><td>匹配理由</td><td><span class="tag tag-green">笔试算法超85%学生</span><span class="tag tag-green">实习含云原生项目</span><span class="tag tag-green">系统设计能力强</span></td></tr>
+        <tr><td>偏好岗位</td><td>AI算法工程师（匹配分 72）</td></tr>
+        <tr><td>差距</td><td><span class="tag tag-red">缺ML项目经历</span><span class="tag tag-red">算法竞赛少</span><span class="tag tag-red">深度学习课程少</span></td></tr>
+        <tr><td>申诉理由</td><td>自学了PyTorch并复现了ResNet，未来希望从事AI方向</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- demo_02 -->
+  <div class="scenario-detail">
+    <div class="scenario-header">&#x1F469;&#x200D;&#x1F4BB; demo_02 · 王婷 — 前端开发工程师 <span style="font-weight:400;color:var(--green);">匹配分 82</span></span></div>
+    <div class="scenario-body">
+      <table>
+        <tr><td>算法排名</td><td>前40%</td></tr>
+        <tr><td>实习经历</td><td>前端开发</td></tr>
+        <tr><td>系统设计得分</td><td>70</td></tr>
+        <tr><td>职业兴趣</td><td>数据科学、数据分析</td></tr>
+        <tr><td>匹配理由</td><td><span class="tag tag-green">实习高度相关</span><span class="tag tag-green">HTML/CSS/JS得分前20%</span><span class="tag tag-green">可视化/交互关键词</span></td></tr>
+        <tr><td>偏好岗位</td><td>数据科学工程师（匹配分 55）</td></tr>
+        <tr><td>差距</td><td><span class="tag tag-red">无Python数据分析项目</span><span class="tag tag-red">统计竞赛空白</span><span class="tag tag-red">SQL未体现</span></td></tr>
+        <tr><td>申诉理由</td><td>课外完成数据分析师训练营并拿到证书，希望重新定岗</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- demo_03 -->
+  <div class="scenario-detail">
+    <div class="scenario-header">&#x1F468;&#x200D;&#x1F4BB; demo_03 · 张伟 — 硬件测试工程师 <span style="font-weight:400;color:var(--orange);">匹配分 78</span></span></div>
+    <div class="scenario-body">
+      <table>
+        <tr><td>算法排名</td><td>后30%</td></tr>
+        <tr><td>实习经历</td><td>硬件测试</td></tr>
+        <tr><td>系统设计得分</td><td>60</td></tr>
+        <tr><td>职业兴趣</td><td>产品经理</td></tr>
+        <tr><td>匹配理由</td><td><span class="tag tag-green">实习直接匹配</span><span class="tag tag-green">电路/信号得分高</span><span class="tag tag-green">硬件/测试关键词高频</span></td></tr>
+        <tr><td>偏好岗位</td><td>产品经理（匹配分 40）</td></tr>
+        <tr><td>差距</td><td><span class="tag tag-red">无产品实习/项目</span><span class="tag tag-red">无产品题考察</span><span class="tag tag-red">未体现产品思维</span></td></tr>
+        <tr><td>申诉理由</td><td>自学产品经理全套课程，主导过校内APP开发项目，附上作品集链接</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- 部署检查清单 -->
+<div class="section">
+  <div class="section-title"><span class="icon">&#x2705;</span> 部署检查清单</div>
+
+  <h3 style="font-size:1rem;margin-bottom:12px;color:var(--accent);">启动步骤</h3>
+  <ul class="checklist">
+    <li>在 <code>backend</code> 目录创建 <code>.env</code> 文件，填入 <code>LLM_API_KEY=你的智谱API密钥</code></li>
+    <li>进入 <code>backend</code> 目录，运行 <code>pip install -r requirements.txt</code></li>
+    <li>进入 <code>backend</code> 目录，运行 <code>python main.py</code> 启动后端（确保端口 8000）</li>
+    <li>进入 <code>frontend</code> 目录，运行 <code>npm install</code></li>
+    <li>进入 <code>frontend</code> 目录，运行 <code>npm start</code> 启动前端（端口 3000）</li>
+    <li>浏览器访问 <code>http://localhost:3000</code> 测试演示功能</li>
+  </ul>
+
+  <h3 style="font-size:1rem;margin:20px 0 12px;color:var(--accent);">后端检查</h3>
+  <ul class="checklist">
+    <li>依赖安装完整（<code>requirements.txt</code>）</li>
+    <li>环境变量配置正确（参考 <code>.env.example</code>）</li>
+    <li>LLM 服务连通性验证</li>
+    <li>API 接口测试通过</li>
+  </ul>
+
+  <h3 style="font-size:1rem;margin:20px 0 12px;color:var(--accent);">前端检查</h3>
+  <ul class="checklist">
+    <li>依赖安装完整（<code>npm install</code>）</li>
+    <li>构建无报错（<code>npm run build</code>）</li>
+    <li>页面功能验证通过</li>
+  </ul>
+
+  <h3 style="font-size:1rem;margin:20px 0 12px;color:var(--accent);">部署环境</h3>
+  <ul class="checklist">
+    <li>服务器资源准备就绪</li>
+    <li>域名 / SSL 配置完成</li>
+    <li>CI/CD 流程确认</li>
+  </ul>
+</div>
+
+<!-- 最终测试 -->
+<div class="section">
+  <div class="section-title"><span class="icon">&#x1F9EA;</span> 最终测试验收</div>
+  <ul class="checklist">
+    <li>点击场景1（李明 demo_01）：应看到<strong>云研发</strong>岗位匹配解释，包含推荐岗位「云计算研发工程师」、匹配分 87 及 key_reasons</li>
+    <li>点击换岗（场景2 王婷 demo_02）：应弹出<strong>数据科学工程师</strong>成长建议，包含 alt_gaps 差距分析与非线性成长路径</li>
+    <li>点击申诉（场景3 张伟 demo_03）：应展示<strong>产品经理</strong>申诉报告，包含 appeal_reason 及结构化陈述</li>
+  </ul>
+</div>
+
+</div>
+
+<footer>
+  AI定岗解释官 Demo · 全栈 Web 应用 · <a href="https://github.com/tianyuan98/job-explain-copilot">GitHub</a>
+</footer>
+
+</body>
+</html>
