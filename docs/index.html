@@ -383,6 +383,29 @@
     <li>域名 / SSL 配置完成</li>
     <li>CI/CD 流程确认</li>
   </ul>
+
+  <h3 style="font-size:1rem;margin:20px 0 12px;color:var(--accent);">GitHub 远程部署</h3>
+  <ul class="checklist">
+    <li>GitHub 仓库创建并推送代码</li>
+    <li>Railway 导入项目，配置环境变量（LLM_API_KEY / LLM_BASE_URL / LLM_MODEL），启动后端</li>
+    <li>Vercel 导入项目，配置前端环境变量（REACT_APP_API_URL），发布</li>
+    <li>浏览器访问 Vercel 域名测试所有场景</li>
+  </ul>
+
+  <p style="margin-top:12px;font-size:0.9rem;">详细部署方案：<a href="https://github.com/tianyuan98/job-explain-copilot/blob/main/docs/deploy-guide.md">GitHub + Vercel + Railway 部署方案</a></p>
+</div>
+
+<!-- 一键部署 -->
+<div class="section">
+  <div class="section-title"><span class="icon">&#x1F680;</span> 一键部署</div>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+    <a href="https://vercel.com/new/clone?repository-url=https://github.com/tianyuan98/job-explain-copilot&root-directory=frontend&env=REACT_APP_API_URL&envDescription=后端%20API%20地址" target="_blank" rel="noopener">
+      <img src="https://vercel.com/button" alt="Deploy with Vercel" style="height:32px;">
+    </a>
+    <a href="https://railway.app/new/template?template=https://github.com/tianyuan98/job-explain-copilot&envs=LLM_API_KEY,LLM_BASE_URL,LLM_MODEL" target="_blank" rel="noopener">
+      <img src="https://railway.app/button.svg" alt="Deploy on Railway" style="height:32px;">
+    </a>
+  </div>
 </div>
 
 <!-- 最终测试 -->
