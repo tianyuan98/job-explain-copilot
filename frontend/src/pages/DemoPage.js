@@ -1,64 +1,113 @@
 import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:8000/api/demo";
+const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
+
+const studentMeta = {
+  demo_01: {
+    intro: "云计算方向",
+    color: "linear-gradient(135deg, #4f8cff, #7bdff2)",
+  },
+  demo_02: {
+    intro: "可视化与交互方向",
+    color: "linear-gradient(135deg, #7c5cff, #f0abfc)",
+  },
+  demo_03: {
+    intro: "硬件测试与产品探索",
+    color: "linear-gradient(135deg, #18b7a7, #ffd166)",
+  },
+};
 
 function DemoPage() {
   const [scenarios, setScenarios] = useState([]);
   const [selectedId, setSelectedId] = useState("");
   const [detail, setDetail] = useState(null);
-  const [loadingScenarios, setLoadingScenarios] = useState(true);
+  const [loadingList, setLoadingList] = useState(true);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [error, setError] = useState("");
-  const [modalType, setModalType] = useState(null);
+  const [showGrowthModal, setShowGrowthModal] = useState(false);
+  const [showAppealModal, setShowAppealModal] = useState(false);
+  const [appealTarget, setAppealTarget] = useState("");
+  const [appealReason, setAppealReason] = useState("");
+  const [appealPreview, setAppealPreview] = useState("");
 
   useEffect(() => {
-    async function fetchScenarios() {
+    async function loadScenarios() {
       try {
-        setLoadingScenarios(true);
-        setError("");
-        const response = await axios.get(`${API_BASE_URL}/scenarios`);
+        setLoadingList(true);
+        const response = await axios.get(`${API_BASE_URL}/api/demo/scenarios`);
         setScenarios(response.data);
-      } catch (err) {
-        setError("场景列表加载失败，请确认后端服务已启动。");
+      } catch (requestError) {
+        setError("演示数据暂时没有加载成功，请稍后再试。");
       } finally {
-        setLoadingScenarios(false);
+        setLoadingList(false);
       }
     }
 
-    fetchScenarios();
+    loadScenarios();
   }, []);
 
-  const selectedScenario = detail?.scenario;
-  const score = selectedScenario?.match_score ?? 0;
+  const scenario = detail?.scenario;
+  const matchScore = scenario?.match_score || 0;
 
-  const initials = useMemo(() => {
-    return scenarios.reduce((result, item) => {
-      result[item.id] = item.name ? item.name.slice(-1) : "?";
-      return result;
-    }, {});
-  }, [scenarios]);
+  const selectedStudent = useMemo(() => {
+    return scenarios.find((item) => item.id === selectedId);
+  }, [scenarios, selectedId]);
 
   async function handleSelectScenario(scenarioId) {
     try {
       setSelectedId(scenarioId);
       setLoadingDetail(true);
       setError("");
-      setModalType(null);
-      const response = await axios.post(`${API_BASE_URL}/explain`, {
+      setShowGrowthModal(false);
+      setShowAppealModal(false);
+      setAppealPreview("");
+
+      const response = await axios.post(`${API_BASE_URL}/api/demo/explain`, {
         scenario_id: scenarioId,
       });
+
       setDetail(response.data);
-    } catch (err) {
-      setError("解释内容生成失败，请稍后重试。");
+      setAppealTarget(response.data.scenario.alternative_job);
+      setAppealReason(response.data.scenario.appeal_reason);
+    } catch (requestError) {
+      setError("AI 解释官正在忙碌，请稍后重新选择。");
     } finally {
       setLoadingDetail(false);
     }
   }
 
-  function closeModal() {
-    setModalType(null);
+  function handleOpenAppeal() {
+    setAppealPreview("");
+    setShowAppealModal(true);
   }
+
+  function handleSubmitAppeal(event) {
+    event.preventDefault();
+
+    if (!scenario) {
+      return;
+    }
+
+    // 仅用于演示：根据表单内容即时生成一份报告预览。
+    setAppealPreview(
+      [
+        `学生姓名：${scenario.name}`,
+        `原推荐岗位：${scenario.recommended_job}`,
+        `申诉目标岗位：${appealTarget || scenario.alternative_job}`,
+        `补充说明摘要：${appealReason || "学生希望补充更多相关经历供复审参考。"}`,
+        `匹配度变化：当前 ${scenario.match_score} 分，目标岗位 ${scenario.alt_match_score} 分`,
+        "结语：建议人工复审",
+      ].join("\n")
+    );
+  }
+
+  function closeModal() {
+    setShowGrowthModal(false);
+    setShowAppealModal(false);
+  }
+
+  const meta = selectedId ? studentMeta[selectedId] : null;
 
   return (
     <main className="demo-page">
@@ -76,28 +125,32 @@ function DemoPage() {
 
       {error && <div className="alert">{error}</div>}
 
-      <section className="scenario-grid" aria-label="演示场景列表">
-        {loadingScenarios ? (
+      <section className="student-grid" aria-label="演示场景列表">
+        {loadingList ? (
           <div className="empty-state">正在加载演示场景...</div>
         ) : (
-          scenarios.map((scenario) => (
+          scenarios.map((s) => (
             <button
-              className={`scenario-card ${
-                selectedId === scenario.id ? "active" : ""
-              }`}
-              key={scenario.id}
-              onClick={() => handleSelectScenario(scenario.id)}
+              className={`student-card ${selectedId === s.id ? "active" : ""}`}
+              key={s.id}
+              onClick={() => handleSelectScenario(s.id)}
               type="button"
             >
-              <span className="avatar">{initials[scenario.id]}</span>
-              <span className="scenario-name">{scenario.name}</span>
-              <span className="scenario-job">{scenario.recommended_job}</span>
+              <span
+                className="student-avatar"
+                style={{ background: studentMeta[s.id]?.color }}
+              >
+                {s.name ? s.name.slice(-1) : "?"}
+              </span>
+              <span className="student-name">{s.name}</span>
+              <span className="student-intro">{studentMeta[s.id]?.intro}</span>
+              <span className="student-job">{s.recommended_job}</span>
             </button>
           ))
         )}
       </section>
 
-      <section className="detail-area">
+      <section className="result-area">
         {loadingDetail && <div className="empty-state">AI 正在生成解释...</div>}
 
         {!loadingDetail && !detail && (
@@ -106,96 +159,138 @@ function DemoPage() {
           </div>
         )}
 
-        {!loadingDetail && detail && selectedScenario && (
-          <div className="detail-card">
-            <div className="score-panel">
+        {!loadingDetail && detail && scenario && (
+          <div className="result-card">
+            <div className="result-top">
               <div
                 className="score-ring"
                 style={{
-                  background: `conic-gradient(#1677ff ${
-                    score * 3.6
-                  }deg, #e8f1ff 0deg)`,
+                  background: `conic-gradient(#5b7cfa ${matchScore * 3.6}deg, #f0f4ff 0deg)`,
                 }}
               >
                 <div className="score-inner">
-                  <strong>{score}</strong>
+                  <strong>{matchScore}</strong>
                   <span>匹配度</span>
                 </div>
               </div>
               <div>
                 <p className="eyebrow">Recommended Role</p>
-                <h2>{selectedScenario.recommended_job}</h2>
+                <h2>{scenario.recommended_job}</h2>
                 <p className="detail-meta">
-                  候选人：{selectedScenario.name} · 备选方向：
-                  {selectedScenario.alternative_job}
+                  候选人：{scenario.name} · 备选方向：{scenario.alternative_job}
                 </p>
               </div>
             </div>
 
-            <div className="explanation-block">
+            <div className="desc-block">
               <h3>推荐解释</h3>
               <p>{detail.explanation}</p>
             </div>
 
-            <div className="action-row">
+            <div className="action-bar">
               <button
-                className="primary-button"
-                onClick={() => setModalType("advice")}
+                className="action-primary"
+                onClick={() => setShowGrowthModal(true)}
                 type="button"
               >
                 我想换岗
               </button>
               <button
-                className="secondary-button"
-                onClick={() => setModalType("appeal")}
+                className="action-secondary"
+                onClick={handleOpenAppeal}
                 type="button"
               >
                 发起申诉
               </button>
             </div>
+
+            {selectedStudent?.recommended_job && (
+              <p className="detail-meta" style={{ marginTop: 18 }}>
+                原匹配岗位：{selectedStudent.recommended_job}
+              </p>
+            )}
           </div>
         )}
       </section>
 
-      {modalType && detail && selectedScenario && (
+      {/* 成长建议弹窗 */}
+      {showGrowthModal && detail && scenario && (
         <div className="modal-backdrop" onClick={closeModal} role="presentation">
           <div
-            className="modal"
-            onClick={(event) => event.stopPropagation()}
+            className="modal-card"
+            onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
           >
-            <button className="close-button" onClick={closeModal} type="button">
-              ×
+            <button className="modal-close" onClick={closeModal} type="button">
+              &times;
             </button>
 
-            {modalType === "advice" && (
-              <>
-                <p className="eyebrow">Growth Advice</p>
-                <h2>目标岗位：{selectedScenario.alternative_job}</h2>
-                <div className="modal-section">
-                  <h3>主要差距</h3>
-                  <ul>
-                    {selectedScenario.alt_gaps.map((gap) => (
-                      <li key={gap}>{gap}</li>
-                    ))}
-                  </ul>
-                </div>
-                <div className="modal-section">
-                  <h3>成长建议</h3>
-                  <p className="pre-line">{detail.advice}</p>
-                </div>
-              </>
-            )}
+            <p className="eyebrow">Growth Advice</p>
+            <h2>目标岗位：{scenario.alternative_job}</h2>
 
-            {modalType === "appeal" && (
-              <>
-                <p className="eyebrow">Appeal Report</p>
-                <h2>申诉报告草稿</h2>
-                <div className="modal-section">
-                  <p className="pre-line">{detail.appeal_report}</p>
-                </div>
-              </>
+            <div className="score-compare">
+              <span>当前匹配分：{scenario.match_score}</span>
+              <span>目标匹配分：{scenario.alt_match_score}</span>
+            </div>
+
+            <div className="modal-block">
+              <h3>主要差距</h3>
+              <ul className="gap-list">
+                {scenario.alt_gaps.map((gap) => (
+                  <li key={gap}>{gap}</li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="modal-block">
+              <h3>成长建议</h3>
+              <p className="pre-line">{detail.advice}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 申诉弹窗 */}
+      {showAppealModal && detail && scenario && (
+        <div className="modal-backdrop" onClick={closeModal} role="presentation">
+          <div
+            className="modal-card appeal-modal"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+          >
+            <button className="modal-close" onClick={closeModal} type="button">
+              &times;
+            </button>
+
+            <p className="eyebrow">Appeal Report</p>
+            <h2>申诉报告</h2>
+
+            <form onSubmit={handleSubmitAppeal}>
+              <label>
+                申诉目标岗位
+                <input
+                  type="text"
+                  value={appealTarget}
+                  onChange={(e) => setAppealTarget(e.target.value)}
+                />
+              </label>
+              <label>
+                补充说明
+                <textarea
+                  rows={4}
+                  value={appealReason}
+                  onChange={(e) => setAppealReason(e.target.value)}
+                />
+              </label>
+              <button className="action-primary" type="submit">
+                生成申诉报告预览
+              </button>
+            </form>
+
+            {appealPreview && (
+              <div className="appeal-preview">{appealPreview}</div>
             )}
           </div>
         </div>
@@ -212,16 +307,16 @@ const styles = `
   .demo-page {
     min-height: 100vh;
     padding: 44px 24px 64px;
-    color: #172033;
+    color: #1f2a44;
     background:
-      radial-gradient(circle at top left, rgba(22, 119, 255, 0.16), transparent 30%),
-      linear-gradient(135deg, #f7fbff 0%, #eef6ff 48%, #f8fbf7 100%);
+      radial-gradient(circle at top left, rgba(91, 124, 250, 0.12), transparent 30%),
+      linear-gradient(135deg, #f7f9ff 0%, #eef4ff 48%, #f8fbf7 100%);
     font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
   }
 
   .hero,
-  .scenario-grid,
-  .detail-area,
+  .student-grid,
+  .result-area,
   .alert {
     width: min(1120px, 100%);
     margin: 0 auto;
@@ -236,17 +331,14 @@ const styles = `
 
   .eyebrow {
     margin: 0 0 8px;
-    color: #1677ff;
+    color: #5b7cfa;
     font-size: 13px;
     font-weight: 700;
     letter-spacing: 0;
     text-transform: uppercase;
   }
 
-  h1,
-  h2,
-  h3,
-  p {
+  h1, h2, h3, p {
     margin-top: 0;
   }
 
@@ -260,7 +352,7 @@ const styles = `
   .subtitle {
     max-width: 680px;
     margin-bottom: 0;
-    color: #526070;
+    color: #58657d;
     font-size: 17px;
     line-height: 1.7;
   }
@@ -268,98 +360,105 @@ const styles = `
   .alert {
     margin-bottom: 18px;
     padding: 14px 16px;
-    border: 1px solid #ffd8bf;
+    border: 1px solid #ffe0c8;
     border-radius: 8px;
-    background: #fff7ed;
-    color: #a34500;
+    background: #fff8f0;
+    color: #b65500;
   }
 
-  .scenario-grid {
+  .student-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 18px;
     margin-bottom: 22px;
   }
 
-  .scenario-card {
-    min-height: 170px;
+  .student-card {
+    min-height: 180px;
     padding: 24px;
-    border: 1px solid rgba(22, 119, 255, 0.12);
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.88);
-    box-shadow: 0 18px 45px rgba(27, 84, 140, 0.1);
+    border: 1px solid rgba(91, 124, 250, 0.12);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 8px 30px rgba(29, 38, 61, 0.06);
     color: inherit;
     cursor: pointer;
     text-align: left;
     transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
   }
 
-  .scenario-card:hover,
-  .scenario-card.active {
+  .student-card:hover,
+  .student-card.active {
     transform: translateY(-4px);
-    border-color: rgba(22, 119, 255, 0.42);
-    box-shadow: 0 24px 58px rgba(22, 119, 255, 0.18);
+    border-color: rgba(91, 124, 250, 0.45);
+    box-shadow: 0 18px 48px rgba(91, 124, 250, 0.16);
   }
 
-  .avatar {
+  .student-avatar {
     display: grid;
     width: 54px;
     height: 54px;
-    margin-bottom: 18px;
+    margin-bottom: 16px;
     place-items: center;
     border-radius: 50%;
-    background: linear-gradient(135deg, #1677ff, #13c2c2);
     color: white;
     font-size: 22px;
     font-weight: 800;
   }
 
-  .scenario-name,
-  .scenario-job {
+  .student-name,
+  .student-intro,
+  .student-job {
     display: block;
   }
 
-  .scenario-name {
-    margin-bottom: 8px;
+  .student-name {
+    margin-bottom: 4px;
     font-size: 22px;
     font-weight: 800;
   }
 
-  .scenario-job {
-    color: #526070;
+  .student-intro {
+    margin-bottom: 8px;
+    color: #5b7cfa;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .student-job {
+    color: #58657d;
     font-size: 15px;
     line-height: 1.5;
   }
 
-  .detail-area {
+  .result-area {
     min-height: 280px;
   }
 
   .empty-state,
-  .detail-card {
-    border: 1px solid rgba(22, 119, 255, 0.12);
+  .result-card {
+    border: 1px solid rgba(91, 124, 250, 0.1);
     border-radius: 8px;
-    background: rgba(255, 255, 255, 0.9);
-    box-shadow: 0 18px 45px rgba(27, 84, 140, 0.1);
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 8px 30px rgba(29, 38, 61, 0.06);
   }
 
   .empty-state {
     padding: 36px;
-    color: #687789;
+    color: #58657d;
     text-align: center;
   }
 
-  .detail-card {
+  .result-card {
     padding: 30px;
   }
 
-  .score-panel {
+  .result-top {
     display: grid;
     grid-template-columns: 132px 1fr;
     gap: 24px;
     align-items: center;
     padding-bottom: 24px;
-    border-bottom: 1px solid #e7eef7;
+    border-bottom: 1px solid #e7ecfb;
   }
 
   .score-ring {
@@ -381,18 +480,18 @@ const styles = `
   }
 
   .score-inner strong {
-    color: #1677ff;
+    color: #5b7cfa;
     font-size: 42px;
     line-height: 1;
   }
 
   .score-inner span {
     margin-top: 6px;
-    color: #687789;
+    color: #58657d;
     font-size: 13px;
   }
 
-  .score-panel h2 {
+  .result-top h2 {
     margin-bottom: 8px;
     font-size: 30px;
     line-height: 1.2;
@@ -400,76 +499,73 @@ const styles = `
 
   .detail-meta {
     margin-bottom: 0;
-    color: #687789;
+    color: #58657d;
     line-height: 1.7;
   }
 
-  .explanation-block {
+  .desc-block {
     padding: 26px 0 8px;
   }
 
-  .explanation-block h3,
-  .modal-section h3 {
+  .desc-block h3 {
     margin-bottom: 12px;
     font-size: 18px;
   }
 
-  .explanation-block p,
-  .pre-line {
-    color: #334155;
+  .desc-block p {
+    color: #40506a;
     font-size: 16px;
     line-height: 1.85;
     white-space: pre-line;
   }
 
-  .action-row {
+  .action-bar {
     display: flex;
     flex-wrap: wrap;
     gap: 12px;
     margin-top: 18px;
   }
 
-  .primary-button,
-  .secondary-button,
-  .close-button {
+  .action-primary,
+  .action-secondary,
+  .modal-close {
     border: 0;
     cursor: pointer;
     font: inherit;
     transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
   }
 
-  .primary-button,
-  .secondary-button {
+  .action-primary,
+  .action-secondary {
     min-width: 126px;
     padding: 12px 18px;
     border-radius: 8px;
     font-weight: 800;
   }
 
-  .primary-button {
-    background: #1677ff;
+  .action-primary {
+    background: #5b7cfa;
     color: white;
-    box-shadow: 0 12px 24px rgba(22, 119, 255, 0.25);
+    box-shadow: 0 12px 24px rgba(91, 124, 250, 0.25);
   }
 
-  .secondary-button {
-    border: 1px solid #cfe0f5;
+  .action-secondary {
+    border: 1px solid #d9e1f2;
     background: white;
-    color: #1677ff;
+    color: #5b7cfa;
   }
 
-  .primary-button:hover,
-  .secondary-button:hover,
-  .close-button:hover {
+  .action-primary:hover,
+  .action-secondary:hover {
     transform: translateY(-2px);
   }
 
-  .primary-button:hover {
-    background: #0958d9;
+  .action-primary:hover {
+    background: #4a64e0;
   }
 
-  .secondary-button:hover {
-    background: #edf6ff;
+  .action-secondary:hover {
+    background: #f3f6ff;
   }
 
   .modal-backdrop {
@@ -483,66 +579,139 @@ const styles = `
     backdrop-filter: blur(8px);
   }
 
-  .modal {
+  .modal-card {
     position: relative;
     width: min(760px, 100%);
-    max-height: min(760px, 88vh);
+    max-height: min(82vh, 760px);
     overflow: auto;
     padding: 30px;
     border-radius: 8px;
-    background: white;
-    box-shadow: 0 30px 80px rgba(8, 23, 44, 0.28);
+    background: #ffffff;
+    box-shadow: 0 30px 90px rgba(29, 38, 61, 0.26);
   }
 
-  .modal h2 {
-    margin-bottom: 20px;
-    font-size: 26px;
+  .modal-card h2 {
+    margin: 0 0 18px;
+    color: #1f2a44;
+    font-size: 30px;
   }
 
-  .modal-section {
-    padding: 18px 0;
-    border-top: 1px solid #e7eef7;
-  }
-
-  .modal-section ul {
-    margin: 0;
-    padding-left: 20px;
-    color: #334155;
-    line-height: 1.8;
-  }
-
-  .close-button {
+  .modal-close {
     position: absolute;
     top: 18px;
     right: 18px;
     width: 36px;
     height: 36px;
     border-radius: 50%;
-    background: #f1f5f9;
-    color: #334155;
+    background: #f2f5fb;
+    color: #58657d;
     font-size: 24px;
     line-height: 1;
   }
 
-  @media (max-width: 820px) {
+  .modal-close:hover {
+    transform: rotate(8deg);
+    background: #e8edfa;
+  }
+
+  .score-compare {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .score-compare span {
+    padding: 9px 12px;
+    border-radius: 8px;
+    background: #f3f6ff;
+    color: #4c5c78;
+    font-weight: 800;
+  }
+
+  .modal-block {
+    padding: 18px 0;
+    border-top: 1px solid #e7ecfb;
+  }
+
+  .modal-block h3 {
+    margin: 0 0 12px;
+    color: #26324a;
+  }
+
+  .gap-list {
+    display: grid;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    color: #40506a;
+    line-height: 1.7;
+  }
+
+  .pre-line {
+    margin: 0;
+    color: #40506a;
+    line-height: 1.85;
+    white-space: pre-line;
+  }
+
+  .appeal-modal form {
+    display: grid;
+    gap: 16px;
+  }
+
+  .appeal-modal label {
+    display: grid;
+    gap: 8px;
+    color: #40506a;
+    font-weight: 800;
+  }
+
+  .appeal-modal input,
+  .appeal-modal textarea {
+    width: 100%;
+    border: 1px solid #d9e1f2;
+    border-radius: 8px;
+    padding: 12px 14px;
+    color: #26324a;
+    font: inherit;
+    outline: none;
+    transition: border-color 160ms ease, box-shadow 160ms ease;
+  }
+
+  .appeal-modal input:focus,
+  .appeal-modal textarea:focus {
+    border-color: #5b7cfa;
+    box-shadow: 0 0 0 4px rgba(91, 124, 250, 0.12);
+  }
+
+  .appeal-preview {
+    margin: 22px 0 0;
+    padding: 18px 20px;
+    border: 0;
+    border-radius: 8px;
+    background: #f3f5f9;
+    color: #40506a;
+    line-height: 1.8;
+    white-space: pre-line;
+  }
+
+  @media (max-width: 840px) {
     .demo-page {
-      padding: 30px 16px 48px;
+      padding: 34px 16px 56px;
     }
 
-    .scenario-grid {
+    .student-grid {
       grid-template-columns: 1fr;
     }
 
-    .score-panel {
+    .result-top {
       grid-template-columns: 1fr;
     }
 
-    .score-panel h2 {
-      font-size: 25px;
-    }
-
-    .detail-card,
-    .modal {
+    .result-card,
+    .modal-card {
       padding: 22px;
     }
   }
