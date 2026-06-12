@@ -12,7 +12,7 @@ from services.explain_service import (
     generate_growth_advice,
     generate_match_explanation,
 )
-from services.llm_service import chat_sync
+from services.llm_service import chat, chat_sync
 
 
 router = APIRouter(prefix="/demo", tags=["demo"])
@@ -413,7 +413,7 @@ async def parse_resume(file: UploadFile = File(...)) -> dict[str, Any]:
         ]
 
         try:
-            llm_response = chat_sync(messages)
+            llm_response = await chat(messages)
             print(f"[parse_resume] LLM 返回长度: {len(llm_response)} 字符", flush=True)
         except Exception as exc:
             error_detail = str(exc)[:300]
@@ -490,7 +490,7 @@ async def generate_portrait(request: PortraitRequest) -> dict[str, str]:
             {"role": "user", "content": user_content},
         ]
 
-        portrait_text = chat_sync(messages)
+        portrait_text = await chat(messages)
         return {"portrait": portrait_text}
     except Exception:
         # Demo 模式或无 API 密钥时返回默认画像
