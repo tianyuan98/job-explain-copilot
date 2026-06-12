@@ -60,9 +60,12 @@ function MainFlow() {
     ? {
         recommended_job: scenario.recommended_job,
         match_score: scenario.match_score,
+        match_range: scenario.match_range,
+        match_anchor: scenario.match_anchor,
         key_reasons: scenario.key_reasons || [],
         alternative_job: scenario.alternative_job,
         alt_match_score: scenario.alt_match_score,
+        alt_match_range: scenario.alt_match_range,
         alt_gaps: scenario.alt_gaps || [],
         alt_suggestions: scenario.alt_suggestions || [],
         explanation: detail?.explanation || "",
@@ -73,9 +76,12 @@ function MainFlow() {
       ? {
           recommended_job: generatedRecommendation.recommended_job,
           match_score: generatedRecommendation.match_score,
+          match_range: generatedRecommendation.match_range,
+          match_anchor: generatedRecommendation.match_anchor,
           key_reasons: generatedRecommendation.key_reasons || [],
           alternative_job: generatedRecommendation.alternative_job,
           alt_match_score: generatedRecommendation.alt_match_score,
+          alt_match_range: generatedRecommendation.alt_match_range,
           alt_gaps: generatedRecommendation.alt_gaps || [],
           alt_suggestions: generatedRecommendation.alt_suggestions || [],
           explanation: "",
@@ -93,6 +99,9 @@ function MainFlow() {
     () => buildAbilityCardsFromDimensions(radarDimensions, abilityCards),
     [radarDimensions, abilityCards]
   );
+  const matchRangeText = getMatchRangeText(recommendation);
+  const matchRangeCenter = getRangeCenterText(recommendation?.match_range, recommendation?.match_score);
+  const altMatchText = getAltMatchText(recommendation);
 
   async function handleStartMatching() {
     // 情况 A：示例数据模式 → 已有推荐数据，直接进入步骤4
@@ -597,6 +606,18 @@ function MainFlow() {
                 ))}
               </div>
 
+              <div className="data-integrity-panel">
+                <h3>数据完整性仪表盘</h3>
+                <ul>
+                  {radarDimensions.map((item) => (
+                    <li key={item.name}>
+                      <span>{item.name}</span>
+                      <strong>{getEvidenceCount(item)}项数据，置信度{item.confidence}</strong>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
               <div className="portrait-feedback">
                 <button
                   className={`dispute-btn ${disputeMode ? "active" : ""}`}
@@ -661,6 +682,9 @@ function MainFlow() {
                   </div>
                 ))}
               </div>
+              <p className="explain-note">
+                提示：以下展示的是可解释维度，与算法内部计算使用的完整特征不完全相同，旨在让你理解推荐方向。
+              </p>
             </article>
 
             <p className="hint">以上分析将作为岗位匹配的基础，如有异议可返回修改。</p>
@@ -696,17 +720,23 @@ function MainFlow() {
             {recommendation ? (
               <article className="match-card">
                 <div className="match-top">
-                  <div
-                    className="score-ring"
-                    style={{
-                      background: `conic-gradient(#5c7cfa ${
-                        matchScore * 3.6
-                      }deg, #edf1ff 0deg)`,
-                    }}
-                  >
-                    <div className="score-center">
-                      <strong>{matchScore}</strong>
-                      <span>匹配度</span>
+                  <div className="score-block">
+                    <div
+                      className="score-ring"
+                      style={{
+                        background: `conic-gradient(#5c7cfa ${
+                          matchScore * 3.6
+                        }deg, #edf1ff 0deg)`,
+                      }}
+                    >
+                      <div className="score-center">
+                        <strong className="score-range">{matchRangeCenter}</strong>
+                        <span>匹配区间</span>
+                      </div>
+                    </div>
+                    <div className="score-range-copy">
+                      <strong>{matchRangeText}</strong>
+                      <span>{recommendation.match_anchor || "暂无历史锚点"}</span>
                     </div>
                   </div>
 
@@ -725,6 +755,10 @@ function MainFlow() {
                     </li>
                   ))}
                 </ul>
+
+                <p className="explain-note">
+                  提示：以上原因基于可解释维度生成，实际算法综合考虑更多特征。我们承诺核心推荐逻辑与解释方向一致。
+                </p>
 
                 <div className="match-actions">
                   <button
@@ -757,8 +791,8 @@ function MainFlow() {
           <p className="eyebrow">目标岗位</p>
           <h3 className="modal-job">{recommendation.alternative_job}</h3>
           <div className="score-pills">
-            <span>匹配度 {recommendation.alt_match_score}</span>
-            <span>当前推荐 {recommendation.match_score}</span>
+            <span>匹配度 {altMatchText}</span>
+            <span>当前推荐 {matchRangeText}</span>
           </div>
 
           {Number.isFinite(Number(recommendation.alt_match_score)) && recommendation.alt_gaps?.length > 0 && (
@@ -1104,6 +1138,47 @@ function getGrowthStepScore(recommendation) {
   return Math.max(1, Math.round((100 - score) / gapCount));
 }
 
+function getFallbackRange(score) {
+  const value = Number(score);
+  if (!Number.isFinite(value)) return "待评估区间";
+  const start = Math.max(0, Math.min(100, value - 2));
+  const end = Math.max(start, Math.min(100, value + 3));
+  if (value >= 80) return `高匹配 ${start}-${end}区间`;
+  if (value >= 60) return `中匹配 ${start}-${end}区间`;
+  return `待提升 ${start}-${end}区间`;
+}
+
+function getMatchRangeText(recommendation) {
+  if (!recommendation) return "待评估区间";
+  return recommendation.match_range || getFallbackRange(recommendation.match_score);
+}
+
+function getAltMatchText(recommendation) {
+  if (!recommendation) return "待评估区间";
+  return recommendation.alt_match_range || getFallbackRange(recommendation.alt_match_score);
+}
+
+function getRangeCenterText(rangeText, score) {
+  const text = String(rangeText || "");
+  const match = text.match(/(\d+\s*-\s*\d+)/);
+  if (match) return match[1].replace(/\s/g, "");
+  const fallback = getFallbackRange(score).match(/(\d+\s*-\s*\d+)/);
+  return fallback ? fallback[1].replace(/\s/g, "") : "待评估";
+}
+
+function getDimensionRange(item) {
+  if (item?.range) return item.range;
+  const level = normalizeRadarLevel(item?.level);
+  if (level === "较强") return "高区间80-90";
+  if (level === "一般" || level === "中等") return "中区间65-75";
+  return "待补充区间<60";
+}
+
+function getEvidenceCount(item) {
+  const count = Number(item?.evidence_count);
+  return Number.isFinite(count) ? Math.max(0, Math.round(count)) : 0;
+}
+
 function normalizeRadarDimensions(dimensions, abilityCards) {
   const source = Array.isArray(dimensions) && dimensions.length
     ? dimensions
@@ -1112,6 +1187,8 @@ function normalizeRadarDimensions(dimensions, abilityCards) {
         level: item.level,
         confidence: "低",
         evidence: item.detail || "来自能力画像文本解析",
+        range: getDimensionRange(item),
+        evidence_count: 1,
       }));
 
   const normalized = source
@@ -1122,15 +1199,17 @@ function normalizeRadarDimensions(dimensions, abilityCards) {
       level: normalizeRadarLevel(item.level),
       confidence: normalizeConfidence(item.confidence),
       evidence: String(item.evidence || item.detail || "暂无补充依据").trim(),
+      range: getDimensionRange(item),
+      evidence_count: getEvidenceCount(item),
     }));
 
   if (normalized.length >= 3) return normalized;
 
   return [
-    { name: "专业基础", level: "待补充", confidence: "低", evidence: "等待资料补充" },
-    { name: "实践能力", level: "待补充", confidence: "低", evidence: "等待资料补充" },
-    { name: "学习背景", level: "待补充", confidence: "低", evidence: "等待资料补充" },
-    { name: "沟通协作", level: "待补充", confidence: "低", evidence: "等待资料补充" },
+    { name: "专业基础", level: "待补充", confidence: "低", evidence: "等待资料补充", range: "待补充区间<60", evidence_count: 0 },
+    { name: "实践能力", level: "待补充", confidence: "低", evidence: "等待资料补充", range: "待补充区间<60", evidence_count: 0 },
+    { name: "学习背景", level: "待补充", confidence: "低", evidence: "等待资料补充", range: "待补充区间<60", evidence_count: 0 },
+    { name: "沟通协作", level: "待补充", confidence: "低", evidence: "等待资料补充", range: "待补充区间<60", evidence_count: 0 },
   ];
 }
 
@@ -1271,6 +1350,8 @@ function AbilityRadar({ dimensions, activeIndex, onToggleTip }) {
           <div className="radar-tooltip">
             <strong>{activeItem.name}</strong>
             <span>置信度：{activeItem.confidence}</span>
+            <span>区间：{activeItem.range || getDimensionRange(activeItem)}</span>
+            <span>支撑数据：{getEvidenceCount(activeItem)}项</span>
             <p>{activeItem.evidence}</p>
           </div>
         )}
@@ -1871,6 +1952,43 @@ const styles = `
     line-height: 1.5;
   }
 
+  .data-integrity-panel {
+    margin: -2px 0 20px;
+    padding: 16px;
+    border: 1px solid #edf0f9;
+    border-radius: 8px;
+    background: white;
+  }
+
+  .data-integrity-panel h3 {
+    margin: 0 0 10px;
+    color: #26324a;
+    font-size: 15px;
+  }
+
+  .data-integrity-panel ul {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .data-integrity-panel li {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    color: #60708b;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .data-integrity-panel strong {
+    color: #5c7cfa;
+    font-weight: 900;
+    text-align: right;
+  }
+
   .portrait-feedback {
     display: flex;
     flex-wrap: wrap;
@@ -2039,6 +2157,14 @@ const styles = `
     color: #8c97b5;
   }
 
+  .explain-note {
+    margin: 16px 0 0;
+    color: #8c97b5;
+    font-size: 13px;
+    line-height: 1.7;
+    text-align: center;
+  }
+
   .match-card {
     border-radius: 12px;
   }
@@ -2060,6 +2186,12 @@ const styles = `
     border-radius: 50%;
   }
 
+  .score-block {
+    display: grid;
+    justify-items: center;
+    gap: 10px;
+  }
+
   .score-center {
     display: grid;
     place-items: center;
@@ -2075,9 +2207,30 @@ const styles = `
     color: #5c7cfa;
   }
 
+  .score-center strong.score-range {
+    font-size: 25px;
+    line-height: 1.1;
+  }
+
   .score-center span {
     font-size: 13px;
     color: #8c97b5;
+  }
+
+  .score-range-copy {
+    display: grid;
+    gap: 3px;
+    text-align: center;
+  }
+
+  .score-range-copy strong {
+    color: #4e60d8;
+    font-size: 13px;
+  }
+
+  .score-range-copy span {
+    color: #8c97b5;
+    font-size: 12px;
   }
 
   .job-copy h2 {
