@@ -500,6 +500,7 @@ PORTRAIT_SYSTEM_PROMPT = (
     "只返回纯JSON对象，不要Markdown代码块，不要任何额外解释文字。"
     "JSON字段必须为：portrait(纯文本画像), dimensions(数组)。"
     "portrait中每行格式为'维度名：等级（依据）'，最后一句固定为'说明：以上是基于你提供资料的初步分析，后续岗位推荐将以此为基础。'"
+    "portrait必须每个能力维度单独换行，禁止用分号或顿号把多个维度连续写在同一行。"
     "dimensions数组每项必须包含name、level、confidence、evidence。"
     "level只能使用'较强'、'一般'、'待补充'之一；confidence只能使用'高'、'中'、'低'之一；evidence用一句简短中文说明依据。"
 )
