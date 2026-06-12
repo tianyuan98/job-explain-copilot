@@ -432,3 +432,60 @@ async def parse_resume(file: UploadFile = File(...)) -> dict[str, Any]:
     except Exception as exc:
         print(f"[parse_resume] 未预期异常: {exc}", flush=True)
         return {"error": "server_error", "message": "服务器内部错误，请稍后重试"}
+
+
+class PortraitRequest(BaseModel):
+    school: str = ""
+    major: str = ""
+    degree: str = ""
+    algorithm_rank: str = ""
+    internship: str = ""
+    projects: str = ""
+    certificates: str = ""
+    career_interest: str = ""
+
+
+PORTRAIT_SYSTEM_PROMPT = (
+    "你是一个校园招聘 AI 画像生成助手。请根据学生提供的基本信息，"
+    "生成一段结构化的能力画像摘要，包含以下维度的评估：算法思维、"
+    "系统设计/专业基础、工程实践、项目完整度、职业意向匹配度。"
+    "每个维度用一句话概括（如'较强''中等''待补充'），语气客观专业。"
+    "最后加上'说明：以上是基于你提供资料的初步分析，后续岗位推荐将以此为基础。'"
+    "只返回画像文本，不要任何额外标记或 JSON 包裹。"
+)
+
+
+@router.post("/generate_portrait")
+async def generate_portrait(request: PortraitRequest) -> dict[str, str]:
+    try:
+        field_lines = [
+            f"学校：{request.school or '未填写'}",
+            f"专业：{request.major or '未填写'}",
+            f"学历：{request.degree or '未填写'}",
+            f"算法笔试排名：{request.algorithm_rank or '未填写'}",
+            f"实习经历：{request.internship or '未填写'}",
+            f"项目经历：{request.projects or '未填写'}",
+            f"证书/补充：{request.certificates or '未填写'}",
+            f"职业意向：{request.career_interest or '未填写'}",
+        ]
+        user_content = "\n".join(field_lines)
+
+        messages = [
+            {"role": "system", "content": PORTRAIT_SYSTEM_PROMPT},
+            {"role": "user", "content": user_content},
+        ]
+
+        portrait_text = chat_sync(messages)
+        return {"portrait": portrait_text}
+    except Exception:
+        # Demo 模式或无 API 密钥时返回默认画像
+        return {
+            "portrait": (
+                "算法思维：待确认（等待资料补充）\n"
+                "系统设计：待确认（等待资料补充）\n"
+                "工程实践：待确认（等待资料补充）\n"
+                "项目完整度：待确认（等待资料补充）\n"
+                "职业意向：待确认（等待资料补充）\n\n"
+                "说明：以上是基于你提供资料的初步分析，后续岗位推荐将以此为基础。"
+            )
+        }
