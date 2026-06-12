@@ -361,60 +361,74 @@ FALLBACK_RESULT: dict[str, str] = {
 
 @router.post("/parse_resume")
 async def parse_resume(file: UploadFile = File(...)) -> dict[str, Any]:
-    if not file.filename or not file.filename.lower().endswith(".pdf"):
-        raise HTTPException(status_code=400, detail="仅支持 PDF 文件")
+    """解析上传的 PDF 简历，调用智谱 API 提取结构化字段。
 
-    # 1. 提取 PDF 文本
+    所有错误均返回 HTTP 200，通过 JSON 中的 error 字段区分成败。
+    """
     try:
-        contents = await file.read()
-        reader = PdfReader(BytesIO(contents))
-        text_parts: list[str] = []
-        for page in reader.pages:
-            page_text = page.extract_text()
-            if page_text:
-                text_parts.append(page_text)
-        raw_text = "\n".join(text_parts).strip()
-    except Exception:
-        raise HTTPException(status_code=400, detail="PDF 文件无法读取，请检查文件是否完整")
+        # ---- 文件校验 ----
+        if not file.filename or not file.filename.lower().endswith(".pdf"):
+            return {"error": "invalid_file", "message": "仅支持 PDF 文件，请上传 .pdf 格式的简历"}
 
-    print(f"[parse_resume] 提取文本长度: {len(raw_text)} 字符", flush=True)
+        # ---- 第一步：提取文本 ----
+        try:
+            contents = await file.read()
+            reader = PdfReader(BytesIO(contents))
+            text_parts: list[str] = []
+            for page in reader.pages:
+                page_text = page.extract_text()
+                if page_text:
+                    text_parts.append(page_text)
+            raw_text = "\n".join(text_parts).strip()
+        except Exception as exc:
+            print(f"[parse_resume] PDF 读取异常: {exc}", flush=True)
+            return {"error": "pdf_read_failed", "message": "PDF 文件无法读取，请检查文件是否完整"}
 
-    if not raw_text:
-        raise HTTPException(status_code=400, detail="未能从 PDF 中提取到文本，该文件可能为扫描件或图片")
+        print(f"[parse_resume] 提取文本长度: {len(raw_text)} 字符", flush=True)
+        if len(raw_text) < 10:
+            print(f"[parse_resume] 文本过短，疑似扫描件: '{raw_text[:50]}'", flush=True)
+            return {
+                "error": "text_extraction_failed",
+                "message": "简历内容无法识别，请确保上传的是文字版PDF，或尝试手动填写",
+            }
 
-    # 2. 调用智谱 API
-    messages = [
-        {"role": "system", "content": PARSE_SYSTEM_PROMPT},
-        {"role": "user", "content": raw_text},
-    ]
+        # ---- 第二步：调用智谱 API ----
+        messages = [
+            {"role": "system", "content": PARSE_SYSTEM_PROMPT},
+            {"role": "user", "content": raw_text},
+        ]
 
-    try:
-        llm_response = chat_sync(messages)
-        print(f"[parse_resume] LLM 返回长度: {len(llm_response)} 字符", flush=True)
+        try:
+            llm_response = chat_sync(messages)
+            print(f"[parse_resume] LLM 返回长度: {len(llm_response)} 字符", flush=True)
+        except Exception as exc:
+            print(f"[parse_resume] LLM 调用异常: {exc}", flush=True)
+            return {"error": "llm_failed", "message": "AI 解析服务暂时不可用，请稍后重试或手动填写"}
+
+        # ---- 第三步：解析 JSON ----
+        cleaned = llm_response.strip()
+        if cleaned.startswith("```"):
+            lines = cleaned.split("\n")
+            lines = [l for l in lines if not l.strip().startswith("```")]
+            cleaned = "\n".join(lines).strip()
+
+        try:
+            result = _json.loads(cleaned)
+            print(f"[parse_resume] JSON 解析成功, 字段: {list(result.keys())}", flush=True)
+        except _json.JSONDecodeError:
+            print(f"[parse_resume] JSON 解析失败, LLM 返回前200字: {llm_response[:200]}", flush=True)
+            return {"error": "parse_failed", "message": "AI 解析暂时不可用，请稍后重试或手动填写"}
+
+        # ---- 第四步：标准化字段 ----
+        normalized: dict[str, str] = {}
+        for key in FALLBACK_RESULT:
+            value = str(result.get(key, "")).strip()
+            if value in ("未识别", "未知", "无", "undefined", "null"):
+                value = ""
+            normalized[key] = value
+
+        return normalized
+
     except Exception as exc:
-        print(f"[parse_resume] LLM 调用失败: {exc}", flush=True)
-        return dict(FALLBACK_RESULT)
-
-    # 3. 解析 JSON
-    cleaned = llm_response.strip()
-    if cleaned.startswith("```"):
-        lines = cleaned.split("\n")
-        lines = [l for l in lines if not l.strip().startswith("```")]
-        cleaned = "\n".join(lines).strip()
-
-    try:
-        result = _json.loads(cleaned)
-        print(f"[parse_resume] JSON 解析成功, 字段: {list(result.keys())}", flush=True)
-    except _json.JSONDecodeError:
-        print(f"[parse_resume] JSON 解析失败, 原始返回: {llm_response[:200]}", flush=True)
-        return dict(FALLBACK_RESULT)
-
-    # 4. 标准化字段：缺失补空字符串，去掉"未识别"
-    normalized: dict[str, str] = {}
-    for key in FALLBACK_RESULT:
-        value = str(result.get(key, "")).strip()
-        if value in ("未识别", "未知", "无"):
-            value = ""
-        normalized[key] = value
-
-    return normalized
+        print(f"[parse_resume] 未预期异常: {exc}", flush=True)
+        return {"error": "server_error", "message": "服务器内部错误，请稍后重试"}
