@@ -60,7 +60,7 @@ function MainFlow() {
     // 情况 B：手动填写模式 → 调用 API 生成
     setGeneratingPortrait(true);
     try {
-      const response = await axios.post(`${API_BASE_URL}/api/generate_portrait`, {
+      const response = await axios.post(`${API_BASE_URL}/api/demo/generate_portrait`, {
         school: extractField("学校"),
         major: extractField("专业"),
         degree: extractField("学历"),
@@ -562,8 +562,10 @@ function parsedToFields(parsed) {
     { key: "school", label: "学校", value: clean(parsed.school), source: "来自简历", editable: true },
     { key: "major", label: "专业", value: clean(parsed.major), source: "来自简历", editable: true },
     { key: "degree", label: "学历", value: clean(parsed.degree), source: "来自简历", editable: true },
+    { key: "internship", label: "实习经历", value: clean(parsed.internship), source: "来自简历", editable: true },
     { key: "project", label: "项目经历", value: clean(parsed.projects), source: "来自简历", editable: true },
-    { key: "extra", label: "补充信息", value: clean(parsed.certificates), source: "来自简历", editable: true },
+    { key: "cert", label: "证书/补充", value: clean(parsed.certificates), source: "来自简历", editable: true },
+    { key: "career_interest", label: "职业意向", value: clean(parsed.career_interest), source: "来自简历", editable: true },
   ];
 }
 
