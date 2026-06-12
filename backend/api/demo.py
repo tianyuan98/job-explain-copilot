@@ -1,13 +1,16 @@
 from typing import Any
+from io import BytesIO
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, File, HTTPException, UploadFile
 from pydantic import BaseModel
+from PyPDF2 import PdfReader
 
 from services.explain_service import (
     generate_appeal_report,
     generate_growth_advice,
     generate_match_explanation,
 )
+from services.llm_service import chat_sync
 
 
 router = APIRouter(prefix="/demo", tags=["demo"])
@@ -344,3 +347,76 @@ def explain_demo_scenario(request: ExplainRequest) -> dict[str, Any]:
         "advice": advice,
         "appeal_report": appeal_report,
     }
+
+
+PARSE_SYSTEM_PROMPT = (
+    "你是一个简历解析助手。请从以下简历文本中提取指定字段，只返回JSON格式，不要其他文字。"
+    "如果某个字段在文本中找不到，请填写'未识别'。"
+    "JSON 字段：name（姓名）、school（学校）、major（专业）、degree（学历）、"
+    "internship（实习经历描述）、projects（项目经历描述）、"
+    "certificates（证书/补充）、career_interest（职业意向）。"
+)
+
+
+@router.post("/parse_resume")
+async def parse_resume(file: UploadFile = File(...)) -> dict[str, Any]:
+    if not file.filename or not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="仅支持 PDF 文件")
+
+    try:
+        contents = await file.read()
+        reader = PdfReader(BytesIO(contents))
+        text_parts: list[str] = []
+        for page in reader.pages:
+            page_text = page.extract_text()
+            if page_text:
+                text_parts.append(page_text)
+        raw_text = "\n".join(text_parts).strip()
+    except Exception:
+        raise HTTPException(status_code=400, detail="PDF 文件无法读取，请检查文件是否完整")
+
+    if not raw_text:
+        raise HTTPException(status_code=400, detail="未能从 PDF 中提取到文本，该文件可能为扫描件或图片")
+
+    messages = [
+        {"role": "system", "content": PARSE_SYSTEM_PROMPT},
+        {"role": "user", "content": f"请解析以下简历文本：\n\n{raw_text}"},
+    ]
+
+    try:
+        llm_response = chat_sync(messages)
+    except Exception:
+        # Demo 模式或无 API 密钥时返回未识别
+        return {
+            "name": "未识别",
+            "school": "未识别",
+            "major": "未识别",
+            "degree": "未识别",
+            "internship": "未识别",
+            "projects": "未识别",
+            "certificates": "未识别",
+            "career_interest": "未识别",
+        }
+
+    import json as _json
+    try:
+        # 清洗 LLM 可能包裹的 markdown 代码块
+        cleaned = llm_response.strip()
+        if cleaned.startswith("```"):
+            lines = cleaned.split("\n")
+            lines = [l for l in lines if not l.startswith("```")]
+            cleaned = "\n".join(lines).strip()
+        result = _json.loads(cleaned)
+    except _json.JSONDecodeError:
+        return {
+            "name": "未识别",
+            "school": "未识别",
+            "major": "未识别",
+            "degree": "未识别",
+            "internship": "未识别",
+            "projects": "未识别",
+            "certificates": "未识别",
+            "career_interest": "未识别",
+        }
+
+    return result
