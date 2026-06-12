@@ -109,9 +109,11 @@ function MainFlow() {
         setParseStage("");
         setParsing(false);
         if (response.data?.error) {
-          setResumeUploaded(true);
+          // 解析失败：只显示错误提示，不标记上传成功
           setParseError(response.data.message || "简历解析失败，请手动填写基本信息");
+          setResumeFileName(file.name);
         } else {
+          // 解析成功：清除错误、标记上传成功、预填表单
           setParseError("");
           setResumeUploaded(true);
           setFormFields(parsedToFields(response.data));
@@ -121,7 +123,7 @@ function MainFlow() {
         clearInterval(stageTimer);
         setParseStage("");
         setParsing(false);
-        setResumeUploaded(true);
+        // 网络错误：只显示错误，不标记上传成功
         setParseError("简历解析失败，请手动填写基本信息");
         setFormFields(defaultResumeFields(file.name));
       });
