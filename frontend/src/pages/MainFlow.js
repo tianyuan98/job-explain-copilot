@@ -89,6 +89,10 @@ function MainFlow() {
     () => normalizeRadarDimensions(detail?.dimensions || scenario?.dimensions || portraitDimensions, abilityCards),
     [detail?.dimensions, scenario?.dimensions, portraitDimensions, abilityCards]
   );
+  const displayAbilityCards = useMemo(
+    () => buildAbilityCardsFromDimensions(radarDimensions, abilityCards),
+    [radarDimensions, abilityCards]
+  );
 
   async function handleStartMatching() {
     // 情况 A：示例数据模式 → 已有推荐数据，直接进入步骤4
@@ -576,7 +580,7 @@ function MainFlow() {
 
               <h3 className="grid-section-title">能力维度概览（点击"我觉得不准"可反馈异议）</h3>
               <div className="ability-grid">
-                {abilityCards.map((item) => (
+                {displayAbilityCards.map((item) => (
                   <button
                     className={`ability-item ${disputeMode ? "disputable" : ""} ${
                       disputedDimensions.includes(item.label) ? "disputed" : ""
@@ -647,7 +651,7 @@ function MainFlow() {
               )}
 
               <div className="dimension-details">
-                {abilityCards.map((item) => (
+                {displayAbilityCards.map((item) => (
                   <div className="dimension-card" key={item.label}>
                     <div className="dim-card-header">
                       <strong>{item.label}</strong>
@@ -994,13 +998,16 @@ function parsePortrait(text) {
     return fallback;
   }
 
-  const lines = text.split("\n").filter((line) => line.includes("："));
+  const lines = text
+    .split(/\n|；|;/)
+    .map((line) => line.trim())
+    .filter((line) => line.includes("：") && !line.startsWith("说明："));
   const parsed = lines.slice(0, 4).map((line) => {
     const [label, ...rest] = line.split("：");
-    const detail = rest.join("：");
+    const detail = rest.join("：").replace(/说明：.*$/, "").trim();
     const level = extractLevel(detail);
     return {
-      label,
+      label: label.trim(),
       level,
       detail,
       tone: getTone(level, label),
@@ -1008,6 +1015,23 @@ function parsePortrait(text) {
   });
 
   return parsed.length ? parsed : fallback;
+}
+
+function buildAbilityCardsFromDimensions(dimensions, fallbackCards) {
+  if (Array.isArray(dimensions) && dimensions.length >= 3) {
+    return dimensions.slice(0, 5).map((item) => {
+      const label = item.name || item.label || "能力维度";
+      const level = normalizeRadarLevel(item.level);
+      return {
+        label,
+        level,
+        detail: item.evidence || item.detail || "暂无补充依据",
+        tone: getTone(level, label),
+      };
+    });
+  }
+
+  return fallbackCards;
 }
 
 function extractLevel(text) {
