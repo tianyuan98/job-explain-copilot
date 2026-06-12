@@ -506,13 +506,19 @@ function defaultResumeFields(fileName) {
 }
 
 function parsedToFields(parsed) {
+  const clean = (val) => {
+    if (!val) return "";
+    const v = String(val).trim();
+    if (v === "未识别" || v === "未知" || v === "无" || v === "undefined" || v === "null") return "";
+    return v;
+  };
   return [
-    { key: "name", label: "姓名", value: parsed.name || "", source: "来自简历", editable: true },
-    { key: "school", label: "学校", value: parsed.school || "", source: "来自简历", editable: true },
-    { key: "major", label: "专业", value: parsed.major || "", source: "来自简历", editable: true },
-    { key: "degree", label: "学历", value: parsed.degree || "", source: "来自简历", editable: true },
-    { key: "project", label: "项目经历", value: parsed.projects || "", source: "来自简历", editable: true },
-    { key: "extra", label: "补充信息", value: parsed.certificates || "", source: "来自简历", editable: true },
+    { key: "name", label: "姓名", value: clean(parsed.name), source: "来自简历", editable: true },
+    { key: "school", label: "学校", value: clean(parsed.school), source: "来自简历", editable: true },
+    { key: "major", label: "专业", value: clean(parsed.major), source: "来自简历", editable: true },
+    { key: "degree", label: "学历", value: clean(parsed.degree), source: "来自简历", editable: true },
+    { key: "project", label: "项目经历", value: clean(parsed.projects), source: "来自简历", editable: true },
+    { key: "extra", label: "补充信息", value: clean(parsed.certificates), source: "来自简历", editable: true },
   ];
 }
 
