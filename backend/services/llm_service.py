@@ -7,9 +7,10 @@ from openai import AsyncOpenAI
 
 DEFAULT_BASE_URL = "https://open.bigmodel.cn/api/paas/v4/"
 DEFAULT_MODEL = "glm-4-flash"
-TIMEOUT_SECONDS = 30.0
+TIMEOUT_SECONDS = 45.0
 MAX_RETRIES = 1
 RETRY_DELAY_SECONDS = 1.0
+MAX_TOKENS = 1024  # 简历解析输出很短，限制以提效
 
 api_key = os.getenv("LLM_API_KEY")
 base_url = os.getenv("LLM_BASE_URL", DEFAULT_BASE_URL)
@@ -37,6 +38,7 @@ async def chat(messages: list[dict[str, Any]]) -> str:
             response = await client.chat.completions.create(
                 model=model,
                 messages=messages,
+                max_tokens=MAX_TOKENS,
                 timeout=TIMEOUT_SECONDS,
             )
             return response.choices[0].message.content or ""
