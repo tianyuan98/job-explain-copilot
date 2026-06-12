@@ -1,5 +1,6 @@
 from typing import Any
 from io import BytesIO
+import json as _json
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from pydantic import BaseModel
@@ -350,12 +351,24 @@ def explain_demo_scenario(request: ExplainRequest) -> dict[str, Any]:
 
 
 PARSE_SYSTEM_PROMPT = (
-    "你是一个简历解析助手。请从以下简历文本中提取指定字段，只返回JSON格式，不要其他文字。"
-    "如果某个字段在文本中找不到，请填写'未识别'。"
-    "JSON 字段：name（姓名）、school（学校）、major（专业）、degree（学历）、"
-    "internship（实习经历描述）、projects（项目经历描述）、"
-    "certificates（证书/补充）、career_interest（职业意向）。"
+    "你是一个精确的简历解析助手。请从以下简历文本中提取信息，"
+    "只返回一个JSON对象，不要包含任何其他文字、解释或标记。"
+    "JSON必须包含以下字段：name(姓名), school(学校), major(专业), "
+    "degree(学历), internship(实习经历), projects(项目经历), "
+    "certificates(证书), career_interest(职业意向)。"
+    "如果文本中找不到某个字段，该字段的值设为空字符串\"\"，不要写\"未识别\"。"
 )
+
+FALLBACK_RESULT: dict[str, str] = {
+    "name": "",
+    "school": "",
+    "major": "",
+    "degree": "",
+    "internship": "",
+    "projects": "",
+    "certificates": "",
+    "career_interest": "",
+}
 
 
 @router.post("/parse_resume")
@@ -363,6 +376,7 @@ async def parse_resume(file: UploadFile = File(...)) -> dict[str, Any]:
     if not file.filename or not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="仅支持 PDF 文件")
 
+    # 1. 提取 PDF 文本
     try:
         contents = await file.read()
         reader = PdfReader(BytesIO(contents))
@@ -375,48 +389,44 @@ async def parse_resume(file: UploadFile = File(...)) -> dict[str, Any]:
     except Exception:
         raise HTTPException(status_code=400, detail="PDF 文件无法读取，请检查文件是否完整")
 
+    print(f"[parse_resume] 提取文本长度: {len(raw_text)} 字符", flush=True)
+
     if not raw_text:
         raise HTTPException(status_code=400, detail="未能从 PDF 中提取到文本，该文件可能为扫描件或图片")
 
+    # 2. 调用智谱 API
     messages = [
         {"role": "system", "content": PARSE_SYSTEM_PROMPT},
-        {"role": "user", "content": f"请解析以下简历文本：\n\n{raw_text}"},
+        {"role": "user", "content": raw_text},
     ]
 
     try:
         llm_response = chat_sync(messages)
-    except Exception:
-        # Demo 模式或无 API 密钥时返回未识别
-        return {
-            "name": "未识别",
-            "school": "未识别",
-            "major": "未识别",
-            "degree": "未识别",
-            "internship": "未识别",
-            "projects": "未识别",
-            "certificates": "未识别",
-            "career_interest": "未识别",
-        }
+        print(f"[parse_resume] LLM 返回长度: {len(llm_response)} 字符", flush=True)
+    except Exception as exc:
+        print(f"[parse_resume] LLM 调用失败: {exc}", flush=True)
+        return dict(FALLBACK_RESULT)
 
-    import json as _json
+    # 3. 解析 JSON
+    cleaned = llm_response.strip()
+    if cleaned.startswith("```"):
+        lines = cleaned.split("\n")
+        lines = [l for l in lines if not l.strip().startswith("```")]
+        cleaned = "\n".join(lines).strip()
+
     try:
-        # 清洗 LLM 可能包裹的 markdown 代码块
-        cleaned = llm_response.strip()
-        if cleaned.startswith("```"):
-            lines = cleaned.split("\n")
-            lines = [l for l in lines if not l.startswith("```")]
-            cleaned = "\n".join(lines).strip()
         result = _json.loads(cleaned)
+        print(f"[parse_resume] JSON 解析成功, 字段: {list(result.keys())}", flush=True)
     except _json.JSONDecodeError:
-        return {
-            "name": "未识别",
-            "school": "未识别",
-            "major": "未识别",
-            "degree": "未识别",
-            "internship": "未识别",
-            "projects": "未识别",
-            "certificates": "未识别",
-            "career_interest": "未识别",
-        }
+        print(f"[parse_resume] JSON 解析失败, 原始返回: {llm_response[:200]}", flush=True)
+        return dict(FALLBACK_RESULT)
 
-    return result
+    # 4. 标准化字段：缺失补空字符串，去掉"未识别"
+    normalized: dict[str, str] = {}
+    for key in FALLBACK_RESULT:
+        value = str(result.get(key, "")).strip()
+        if value in ("未识别", "未知", "无"):
+            value = ""
+        normalized[key] = value
+
+    return normalized
