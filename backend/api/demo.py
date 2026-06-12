@@ -83,9 +83,9 @@ demo_scenarios: dict[str, dict[str, Any]] = {
             {
                 "label": "项目经历",
                 "value": (
-                    ""分布式缓存系统"课程设计（2024.09 - 2024.12），技术栈：Go + Redis + gRPC，"
+                    "\u201c分布式缓存系统\u201d课程设计（2024.09 - 2024.12），技术栈：Go + Redis + gRPC，"
                     "负责核心缓存淘汰策略实现，通过 Redis 集群实现数据分片与高可用。\n"
-                    ""轻量级 API 网关"个人项目（2025.01 - 2025.04），技术栈：Go + Gin + JWT + Docker，"
+                    "\u201c轻量级 API 网关\u201d个人项目（2025.01 - 2025.04），技术栈：Go + Gin + JWT + Docker，"
                     "独立完成路由转发、限流、鉴权模块，部署在阿里云 ECS，已通过毕业设计答辩。"
                 ),
                 "source": "来自简历",
@@ -127,7 +127,7 @@ demo_scenarios: dict[str, dict[str, Any]] = {
         "key_reasons": [
             "实习经历与前端岗位高度匹配",
             "笔试中 HTML/CSS/JS 模块得分前20%",
-            "职业问卷中多次出现"可视化"、"交互"关键词",
+            "职业问卷中多次出现\u201c可视化\u201d、\u201c交互\u201d关键词",
         ],
         "alternative_job": "数据科学工程师",
         "alt_match_score": 55,
@@ -175,9 +175,9 @@ demo_scenarios: dict[str, dict[str, Any]] = {
             {
                 "label": "项目经历",
                 "value": (
-                    ""数据可视化大屏"课程项目（2024.10 - 2025.01），技术栈：Vue3 + ECharts + WebSocket，"
+                    "\u201c数据可视化大屏\u201d课程项目（2024.10 - 2025.01），技术栈：Vue3 + ECharts + WebSocket，"
                     "实现实时数据流展示，设计可复用图表组件，获得校级优秀项目。\n"
-                    ""个人博客系统"开源项目（持续维护），技术栈：Next.js + TailwindCSS + MDX，"
+                    "\u201c个人博客系统\u201d开源项目（持续维护），技术栈：Next.js + TailwindCSS + MDX，"
                     "全栈独立开发，支持暗黑模式与全文检索，GitHub Stars 120+。"
                 ),
                 "source": "来自简历",
@@ -219,7 +219,7 @@ demo_scenarios: dict[str, dict[str, Any]] = {
         "key_reasons": [
             "实习岗位与硬件测试直接对口",
             "笔试中电路、信号相关题目得分较高",
-            "职业问卷中出现"硬件"、"测试"频次高",
+            "职业问卷中出现\"硬件\"、\"测试\"频次高",
         ],
         "alternative_job": "产品经理",
         "alt_match_score": 40,
@@ -267,9 +267,9 @@ demo_scenarios: dict[str, dict[str, Any]] = {
             {
                 "label": "项目经历",
                 "value": (
-                    ""基于 Arduino 的智能家居控制系统"课设（2024.03 - 2024.06），技术栈：Arduino + C++ + MQTT，"
+                    "\u201c基于 Arduino 的智能家居控制系统\u201d课设（2024.03 - 2024.06），技术栈：Arduino + C++ + MQTT，"
                     "负责硬件选型与嵌入式开发，实现温湿度传感器数据上报与远程控制。\n"
-                    ""校园二手交易平台"小程序（2024.09 - 2024.12），技术栈：微信小程序 + 云开发，"
+                    "\u201c校园二手交易平台\u201d小程序（2024.09 - 2024.12），技术栈：微信小程序 + 云开发，"
                     "负责前端页面与数据库设计，用户量达到校内 500+。"
                 ),
                 "source": "来自简历",
