@@ -461,12 +461,16 @@ class PortraitRequest(BaseModel):
 
 
 PORTRAIT_SYSTEM_PROMPT = (
-    "你是一个校园招聘 AI 画像生成助手。请根据学生提供的基本信息，"
-    "生成一段结构化的能力画像摘要，包含以下维度的评估：算法思维、"
-    "系统设计/专业基础、工程实践、项目完整度、职业意向匹配度。"
-    "每个维度用一句话概括（如'较强''中等''待补充'），语气客观专业。"
-    "最后加上'说明：以上是基于你提供资料的初步分析，后续岗位推荐将以此为基础。'"
+    "你是一个专业的职业能力分析助手。请根据学生信息和其职业意向，"
+    "灵活选择3-4个最相关的维度进行简要评价（每个维度用'较强/一般/待补充'标注），并给出依据。"
+    "语气亲切专业，最后一句固定为'以上是基于你提供资料的初步分析，后续岗位推荐将以此为基础。'"
     "只返回画像文本，不要任何额外标记或 JSON 包裹。"
+)
+
+PORTRAIT_TAIL = (
+    "请根据该学生的职业意向或经历特征，自行判断最合适的分析维度"
+    "（如技术类岗位可用算法思维、工程实践等；非技术类岗位可用沟通协调、专业知识、实习匹配度等），"
+    "生成一份简短的能力画像。"
 )
 
 
@@ -483,7 +487,7 @@ async def generate_portrait(request: PortraitRequest) -> dict[str, str]:
             f"证书/补充：{request.certificates or '未填写'}",
             f"职业意向：{request.career_interest or '未填写'}",
         ]
-        user_content = "\n".join(field_lines)
+        user_content = "\n".join(field_lines) + "\n\n" + PORTRAIT_TAIL
 
         messages = [
             {"role": "system", "content": PORTRAIT_SYSTEM_PROMPT},
@@ -504,6 +508,102 @@ async def generate_portrait(request: PortraitRequest) -> dict[str, str]:
                 "说明：以上是基于你提供资料的初步分析，后续岗位推荐将以此为基础。"
             )
         }
+
+
+class RecommendRequest(BaseModel):
+    name: str = ""
+    school: str = ""
+    major: str = ""
+    degree: str = ""
+    algorithm_rank: str = ""
+    internship: str = ""
+    projects: str = ""
+    certificates: str = ""
+    career_interest: str = ""
+    portrait: str = ""
+
+
+RECOMMEND_SYSTEM_PROMPT = (
+    "你是一个校园招聘 AI 定岗推荐助手。请根据学生的基本信息、能力画像，"
+    "推荐一个最适合的岗位，并给出匹配度、三条推荐原因。"
+    "同时提供一个备选岗位、当前匹配度、差距和弥补建议。"
+    "仅返回JSON格式，不含其他文字。"
+)
+
+RECOMMEND_FALLBACK: dict[str, Any] = {
+    "recommended_job": "未识别到合适岗位",
+    "match_score": 50,
+    "key_reasons": ["缺少足够信息进行精准推荐", "建议补充项目经历", "可尝试联系 HR 获取更多岗位信息"],
+    "alternative_job": "通用岗位",
+    "alt_match_score": 50,
+    "alt_gaps": ["缺少针对性经历"],
+    "alt_suggestions": ["完善简历后再试", "添加更多实习或项目经历"],
+}
+
+
+@router.post("/generate_recommendation")
+async def generate_recommendation(request: RecommendRequest) -> dict[str, Any]:
+    """根据学生信息 + 能力画像，调用智谱 API 生成岗位推荐"""
+    user_lines = [
+        f"姓名：{request.name or '未填写'}",
+        f"学校：{request.school or '未填写'}",
+        f"专业：{request.major or '未填写'}",
+        f"学历：{request.degree or '未填写'}",
+    ]
+    if request.algorithm_rank:
+        user_lines.append(f"算法笔试排名：{request.algorithm_rank}")
+    user_lines.extend([
+        f"实习经历：{request.internship or '未填写'}",
+        f"项目经历：{request.projects or '未填写'}",
+        f"证书/补充：{request.certificates or '未填写'}",
+        f"职业意向：{request.career_interest or '未填写'}",
+        "",
+        f"【能力画像】\n{request.portrait or '暂无画像'}",
+    ])
+    user_content = "\n".join(user_lines)
+
+    messages = [
+        {"role": "system", "content": RECOMMEND_SYSTEM_PROMPT},
+        {"role": "user", "content": user_content},
+    ]
+
+    try:
+        llm_response = await chat(messages)
+    except Exception as exc:
+        print(f"[recommend] LLM 调用失败: {exc}", flush=True)
+        return {"error": "llm_failed", "message": "岗位推荐生成失败，请重试", **RECOMMEND_FALLBACK}
+
+    # 清洗 JSON
+    cleaned = llm_response.strip()
+    if cleaned.startswith("```"):
+        lines = cleaned.split("\n")
+        lines = [l for l in lines if not l.strip().startswith("```")]
+        cleaned = "\n".join(lines).strip()
+
+    try:
+        result = _json.loads(cleaned)
+    except _json.JSONDecodeError:
+        print(f"[recommend] JSON 解析失败, 返回前200字: {llm_response[:200]}", flush=True)
+        return {"error": "parse_failed", "message": "推荐结果解析失败", **RECOMMEND_FALLBACK}
+
+    # 标准化字段
+    normalized: dict[str, Any] = {}
+    for key in RECOMMEND_FALLBACK:
+        val = result.get(key, RECOMMEND_FALLBACK[key])
+        if key == "match_score" or key == "alt_match_score":
+            try:
+                val = int(val)
+            except (ValueError, TypeError):
+                val = RECOMMEND_FALLBACK[key]
+        elif isinstance(val, list):
+            if not val:
+                val = RECOMMEND_FALLBACK[key]
+        else:
+            if not val:
+                val = RECOMMEND_FALLBACK[key]
+        normalized[key] = val
+
+    return normalized
 
 
 @router.get("/llm_health")
