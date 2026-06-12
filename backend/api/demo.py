@@ -626,6 +626,74 @@ class RecommendRequest(BaseModel):
     portrait_dispute: str = ""
 
 
+class AppealReportRequest(BaseModel):
+    name: str = ""
+    original_job: str = ""
+    target_job: str = ""
+    reason: str = ""
+    orig_score: int = 0
+    target_score: int = 0
+
+
+def _build_appeal_fallback_report(request: AppealReportRequest) -> str:
+    return "\n".join([
+        "【学生申诉结构化报告】",
+        "",
+        "一、学生基本信息",
+        f"- 学生姓名：{request.name or '未填写'}",
+        "",
+        "二、原推荐岗位信息",
+        f"- 原推荐岗位：{request.original_job or '未填写'}",
+        "",
+        "三、申诉目标岗位信息",
+        f"- 申诉目标岗位：{request.target_job or '未填写'}",
+        "",
+        "四、补充说明摘要",
+        f"- {request.reason or '学生希望补充更多材料供 HR 复审。'}",
+        "",
+        "五、岗位匹配度变化",
+        f"- 原岗位匹配分：{request.orig_score}",
+        f"- 目标岗位匹配分：{request.target_score}",
+        "",
+        "六、结语",
+        "- 建议进入人工复审，以便结合补充材料进一步判断。",
+    ])
+
+
+def _build_appeal_negotiation(request: AppealReportRequest) -> str:
+    gap = request.orig_score - request.target_score
+    abs_gap = abs(gap)
+    direction = "低于" if gap > 0 else "高于" if gap < 0 else "接近"
+    return (
+        f"AI 已分析你的申诉。你申请的「{request.target_job or '目标岗位'}」与当前推荐岗位"
+        f"「{request.original_job or '原推荐岗位'}」匹配度差距为 {abs_gap} 分，"
+        f"目标岗位当前匹配度{direction}原推荐岗位。"
+        "如果你有新的项目、证书、作品集或面试表现材料，可以继续申诉并进入人工复核；"
+        "如果暂无补充材料，也可以先保留当前推荐结果。是否坚持申诉？"
+    )
+
+
+@router.post("/generate_appeal_report")
+def generate_appeal_report_demo(request: AppealReportRequest) -> dict[str, str]:
+    try:
+        report = generate_appeal_report(
+            request.name,
+            request.original_job,
+            request.target_job,
+            request.reason,
+            request.orig_score,
+            request.target_score,
+        )
+    except Exception as exc:
+        print(f"[appeal] 申诉报告生成失败: {exc}", flush=True)
+        report = _build_appeal_fallback_report(request)
+
+    return {
+        "report": report,
+        "negotiation": _build_appeal_negotiation(request),
+    }
+
+
 RECOMMEND_SYSTEM_PROMPT = (
     "你是一个校园招聘 AI 定岗推荐助手。请根据学生的基本信息、能力画像，"
     "推荐一个最适合的岗位，并给出匹配度、三条推荐原因。"
