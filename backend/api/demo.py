@@ -114,6 +114,12 @@ demo_scenarios: dict[str, dict[str, Any]] = {
             "你的职业意向：后端开发、云原生、分布式系统（来自志愿，与实习和项目方向一致）\n\n"
             "说明：以上是基于你提供资料的初步分析，后续岗位推荐将以此为基础。"
         ),
+        "dimensions": [
+            {"name": "算法思维", "level": "较强", "confidence": "高", "evidence": "笔试算法成绩位列前15%"},
+            {"name": "系统设计", "level": "较强", "confidence": "高", "evidence": "系统设计评分85分，项目涉及缓存分片和高可用"},
+            {"name": "工程实践", "level": "较强", "confidence": "高", "evidence": "腾讯云原生后端实习覆盖 Go 微服务、Kubernetes 和 CI/CD"},
+            {"name": "项目完整度", "level": "较强", "confidence": "中", "evidence": "分布式缓存系统与 API 网关均有技术栈、职责和结果"},
+        ],
         "explanation": "亲爱的同学，您好！\n\n在仔细分析了您的个人资料和实习经历后，我们非常高兴地向您推荐云计算研发工程师这个岗位。以下是我们推荐这个岗位的几个关键原因：\n\n首先，您的笔试算法成绩位列前15%，这充分证明了您在逻辑思维和算法设计方面的强大能力。云计算领域对这类能力有着极高的需求，因此您在这个岗位上的表现将会非常出色。\n\n其次，您的实习经历与该岗位直接相关。在腾讯科技（深圳）有限公司的实习期间，您使用Go语言开发容器化微服务，并参与了Kubernetes集群的运维工作。这些宝贵的实践经验将帮助您更快地融入团队，并发挥您的专业技能。\n\n最后，在面试中，您的系统设计能力得到了85分的高评价，这表明您在架构设计和系统优化方面具备扎实的基础。这对于云计算研发工程师这一岗位至关重要。\n\n综上所述，我们相信您是云计算研发工程师这个岗位的理想人选。当然，我们也理解您可能对其他岗位也感兴趣，如果您想了解更多关于其他岗位的信息，可以点击下方的【探索其他岗位】。\n\n期待您的加入，一起在云计算领域开启新的篇章！\n\n如需了解为何未推荐其他岗位，可点击下方【探索其他岗位】。",
         "advice": "成长建议：\n\n1. **加强机器学习项目经历积累**：\n   - **建议**：积极参与或主导与机器学习相关的项目，例如参与开源项目、内部技术挑战赛或自己发起小型的机器学习项目。通过实际操作，提升在数据预处理、特征工程、模型选择和调优等方面的能力。\n   - **行动**：报名参加在线课程或工作坊，学习机器学习框架（如TensorFlow或PyTorch）的应用，并在项目中实践。\n\n2. **提升算法竞赛参与度**：\n   - **建议**：报名参加算法竞赛，如Kaggle竞赛，通过解决实际问题来提升算法设计能力和问题解决技巧。竞赛经验有助于在简历中突出你的技术实力。\n   - **行动**：关注算法竞赛的信息，如每周的编程挑战，定期参加并记录你的成绩和经验。\n\n3. **体现深度学习课程成绩**：\n   - **建议**：确保你的简历中清晰地体现了深度学习相关课程的成绩，特别是那些与AI算法工程师岗位紧密相关的课程。如果成绩优异，可以详细列出课程名称、成绩以及你在课程中的具体贡献。\n   - **行动**：更新简历，将深度学习相关课程的成绩以突出方式呈现，并简要描述你在课程项目中的角色和取得的成果。\n\n引导：\n\n若您已经根据以上建议采取了行动，并成功补充了机器学习项目经历、算法竞赛获奖记录以及深度学习相关课程成绩，这些材料将有助于提升您在AI算法工程师岗位上的匹配度。请确保所有信息都是最新和最准确的。一旦完成这些补充，您可以发起岗位复审，以期待获得新的机会。祝您成长顺利，期待您的复审申请！",
         "appeal_report": "【学生申诉结构化报告】\n\n一、学生基本信息\n- 学生姓名：李明\n\n二、原推荐岗位信息\n- 原推荐岗位：云计算研发工程师\n\n三、申诉目标岗位信息\n- 申诉目标岗位：AI 算法工程师\n\n四、补充说明摘要\n- 李明同学表示，通过自学掌握了 PyTorch 并成功复现了 ResNet 模型，对 AI 领域有浓厚兴趣，希望转向 AI 算法工程师岗位。\n\n五、岗位匹配度变化\n- 原岗位匹配分：87\n- 目标岗位匹配分：72\n\n六、建议\n- 由于李明同学在 AI 领域展现出一定的自学能力和项目经验，但原推荐岗位与申诉目标岗位的匹配分存在一定差距，建议进行以下处理：\n  - 建议人工复审：对李明同学的技术能力和学习热情进行更深入的评估，以确定其在 AI 算法工程师岗位上的适应性和潜力。\n  - 维持原结果：如果经过复审，认为李明同学在云计算研发工程师岗位上具备更高的匹配度和职业发展潜力，则维持原推荐岗位。\n\n七、结语\n- 根据以上分析，建议进行人工复审以确定最终岗位分配。",
@@ -209,6 +215,12 @@ demo_scenarios: dict[str, dict[str, Any]] = {
             "你的职业意向：数据科学、数据分析，同时对前端也有兴趣（来自志愿）\n\n"
             "说明：以上是基于你提供资料的初步分析，后续岗位推荐将以此为基础。"
         ),
+        "dimensions": [
+            {"name": "算法思维", "level": "一般", "confidence": "中", "evidence": "算法笔试排名前40%，基础能力达标"},
+            {"name": "前端工程", "level": "较强", "confidence": "高", "evidence": "字节跳动前端实习覆盖 React + TypeScript 和组件库建设"},
+            {"name": "交互与可视化", "level": "较强", "confidence": "高", "evidence": "数据可视化大屏项目使用 Vue3 + ECharts + WebSocket，并获得校级优秀项目"},
+            {"name": "数据分析能力", "level": "待补充", "confidence": "中", "evidence": "职业意向偏数据科学，但缺少 Python、SQL 或统计建模经历"},
+        ],
         "explanation": "亲爱的同学，\n\n首先，非常感谢你对我们公司的关注和兴趣。经过综合考虑你的个人能力和过往经历，我们非常推荐你担任前端开发工程师这一岗位。\n\n首先，你的实习经历与前端岗位高度匹配。在字节跳动担任前端开发实习生的经历，让你在React和TypeScript等技术上积累了宝贵的实践经验，这对于前端开发工程师这一岗位来说至关重要。\n\n其次，你在笔试中HTML/CSS/JS模块的得分位居前20%，这充分证明了你在前端技术方面的扎实基础和优秀能力。\n\n再者，在职业问卷中，你多次提到\"可视化\"和\"交互\"这两个关键词，这表明你对前端开发中的用户体验和视觉效果有着浓厚的兴趣，这也是我们前端开发工程师岗位所看重的特质。\n\n当然，我们也理解你对数据科学和数据分析领域的兴趣，前端开发工程师这一岗位同样可以为你在数据可视化方面提供广阔的发展空间。\n\n最后，如需了解为何未推荐其他岗位，可点击下方【探索其他岗位】。\n\n期待你的加入，共同开启美好的职业旅程！\n\n祝好，\n[公司名称]校园招聘团队",
         "advice": "成长建议：\n\n1. **积累 Python 数据分析项目经验**：\n   - **建议**：利用业余时间参与或自行发起一些数据分析相关的项目。可以从小型数据集开始，逐步提升至更复杂的数据集。参与开源项目也是不错的选择，这不仅能提高你的编程能力，还能让你在项目中实际应用Python数据分析。\n   - **具体行动**：加入数据分析的在线课程，完成项目报告；在GitHub上寻找并参与相关项目；利用工具如Pandas、NumPy、Matplotlib等进行数据分析实践。\n\n2. **参加数学建模或统计类竞赛**：\n   - **建议**：报名参加数学建模或统计类竞赛，这些竞赛通常需要综合运用数学、统计学和编程知识解决问题，能够有效提升你的数据分析和解决问题的能力。\n   - **具体行动**：关注相关竞赛信息，如全国大学生数学建模竞赛、统计建模与应用大赛等；组建团队，练习历届竞赛题目；在竞赛过程中不断学习和改进。\n\n3. **提升 SQL 能力**：\n   - **建议**：通过实际操作和在线课程来提高你的SQL技能。可以通过模拟数据库环境进行练习，或者在实际工作中寻找机会应用SQL。\n   - **具体行动**：安装SQL数据库如MySQL或PostgreSQL，进行实际操作；参加SQL在线课程，如\"SQL从入门到精通\"；在工作中主动承担数据库查询任务，增强实战经验。\n\n引导：\n若您已经根据以上建议采取了行动，并在相关领域取得了显著的进步，请整理相关项目经验、竞赛成果和SQL能力的证明材料。准备好这些补充材料后，您可以发起岗位复审，以证明您已经缩小了与目标岗位的差距，并具备成为一名数据科学工程师的潜力。祝您成长顺利！",
         "appeal_report": "【结构化报告】\n\n---\n\n**学生姓名：** 王婷\n\n**原推荐岗位：** 前端开发工程师\n\n**申诉目标岗位：** 数据科学工程师\n\n**补充说明摘要：**\n王婷同学提出申诉，希望调整其推荐岗位。她在课外参加了数据分析师训练营并获得了证书，以此证明自己对数据科学领域的兴趣和技能提升，希望学校能考虑其情况，重新评估并推荐数据科学工程师岗位。\n\n**匹配度变化：**\n- 原岗位匹配分：82\n- 目标岗位匹配分：55\n\n**结语：**\n鉴于王婷同学提供的课外学习和证书证明，以及原岗位与目标岗位的匹配分差异，建议进行人工复审，以更全面地评估她的技能和兴趣与目标岗位的匹配度。复审结果将有助于确定是否调整推荐岗位，以更好地满足学生的职业发展需求。建议：建议人工复审。\n\n---",
@@ -304,6 +316,12 @@ demo_scenarios: dict[str, dict[str, Any]] = {
             "你的职业意向：产品经理，对硬件兴趣不大（来自志愿）\n\n"
             "说明：以上是基于你提供资料的初步分析，后续岗位推荐将以此为基础。"
         ),
+        "dimensions": [
+            {"name": "算法思维", "level": "待补充", "confidence": "中", "evidence": "算法笔试排名后30%，通用编程与算法能力暂不突出"},
+            {"name": "硬件基础", "level": "较强", "confidence": "高", "evidence": "电子信息工程背景，电路和信号相关题目得分较高"},
+            {"name": "测试实践", "level": "较强", "confidence": "高", "evidence": "华为 5G 基站射频模块测试实习，涉及 Python 自动化脚本和测试报告"},
+            {"name": "产品能力", "level": "待补充", "confidence": "中", "evidence": "职业意向为产品经理，但产品调研、需求分析和商业指标经历不足"},
+        ],
         "explanation": "亲爱的同学，您好！\n\n首先，非常感谢您对我们公司的关注和选择。经过综合评估，我们非常高兴地向您推荐硬件测试工程师这个岗位。以下是我们推荐这个岗位的几个关键原因：\n\n1. **实习经历与岗位对口**：您在华为技术有限公司的实习经历，正是硬件测试工程师岗位的直接对口经验。您在实习期间负责5G基站射频模块的自动化测试脚本编写和测试报告输出，这些经历充分证明了您在硬件测试领域的专业能力和实践技能。\n\n2. **笔试表现优异**：在笔试环节，您在电路和信号相关题目上的得分较高，这充分展示了您在硬件知识方面的扎实基础和良好的学习理解能力。\n\n3. **职业兴趣匹配**：在您的职业问卷中，我们发现\"硬件\"和\"测试\"这两个关键词出现的频次较高，这表明您对硬件测试领域有着浓厚的兴趣和热情。\n\n当然，我们也注意到您对产品经理这一岗位也表现出一定的兴趣，但考虑到您的实习经历、笔试表现和职业兴趣，硬件测试工程师这个岗位将为您提供一个更好的发展平台，帮助您在技术领域深耕细作。\n\n如果您对其他岗位也感兴趣，或者想了解更多关于这个岗位的信息，请点击下方的【探索其他岗位】进行了解。\n\n期待您的加入，共同开启精彩的职业旅程！\n\n祝好，\n[公司名称]校园招聘团队",
         "advice": "成长建议：\n\n1. **积累产品相关实习或项目经历**\n   - **建议**：主动寻找与产品相关的实习或项目机会，可以是校园项目、校内竞赛或者是与产品经理合作的机会。通过实际操作，理解产品开发的流程和产品经理的角色，积累实践经验。\n   - **行动步骤**：\n     - 查找校园内外的产品开发工作坊。\n     - 参与校内的创新创业项目。\n     - 与正在从事产品经理的朋友合作，参与项目。\n\n2. **提升笔试中的产品思维能力**\n   - **建议**：定期练习产品思维相关的题目，如用户需求分析、产品设计、产品策略等。可以通过在线课程、阅读相关书籍或者参加相关的培训来提升这方面的能力。\n   - **行动步骤**：\n     - 加入产品经理相关的线上社区，如PMCAFFE、人人都是产品经理等。\n     - 参加产品思维相关的网络课程，如网易云课堂、慕课网上的产品经理课程。\n     - 定期进行模拟笔试，尤其是针对产品思维题目的训练。\n\n3. **强化职业问卷中的产品经理核心能力体现**\n   - **建议**：在职业问卷中，通过具体的例子来展示你的产品经理核心能力，如市场洞察力、用户同理心、项目管理能力等。\n   - **行动步骤**：\n     - 在个人简历和工作描述中，使用STAR法则（Situation, Task, Action, Result）来描述你的经历。\n     - 列举具体案例，如\"在XX项目中，我如何通过XX策略解决了XX问题\"。\n     - 与产品经理职位描述中的核心能力相匹配，确保你的回答能够体现出这些能力。\n\n引导学生：\n若您已经按照上述建议采取了行动，积累了相关经验，并在职业问卷中体现了产品经理的核心能力，那么您的职业发展路径已经向前迈出了一大步。此时，您可以发起岗位复审，让评审团重新评估您的匹配度。祝您在职业成长的道路上取得成功！",
         "appeal_report": "【结构化学生申诉报告】\n\n一、学生信息\n- 学生姓名：张伟\n\n二、原推荐岗位\n- 原推荐岗位：硬件测试工程师\n\n三、申诉目标岗位\n- 申诉目标岗位：产品经理\n\n四、补充说明摘要\n- 学生张伟自学了产品经理全套课程，并主导过校内 APP 开发项目。为支持其申诉，学生提供了作品集链接，表达了对产品经理岗位的强烈兴趣和相应能力。\n\n五、匹配度变化\n- 原岗位匹配分：78\n- 目标岗位匹配分：40\n\n六、建议\n- 由于学生张伟提供了自学经历和项目经验作为补充，且目标岗位匹配分相较于原推荐岗位有较大差距，建议进行人工复审，以更全面地评估学生的能力和适应性。\n\n七、结语\n- 建议人工复审。",
@@ -333,6 +351,7 @@ def explain_demo_scenario(request: ExplainRequest) -> dict[str, Any]:
         "scenario": scenario,
         "archive": scenario["archive"],
         "portrait": scenario["portrait"],
+        "dimensions": scenario.get("dimensions", []),
         "explanation": scenario.get("explanation", ""),
         "advice": scenario.get("advice", ""),
         "appeal_report": scenario.get("appeal_report", ""),
@@ -462,9 +481,12 @@ class PortraitRequest(BaseModel):
 
 PORTRAIT_SYSTEM_PROMPT = (
     "你是一个专业的职业能力分析助手。请根据学生信息和其职业意向，"
-    "灵活选择3-4个最相关的维度进行简要评价（每个维度用'较强/一般/待补充'标注），并给出依据。"
-    "语气亲切专业，最后一句固定为'以上是基于你提供资料的初步分析，后续岗位推荐将以此为基础。'"
-    "只返回画像文本，不要任何额外标记或 JSON 包裹。"
+    "灵活选择3-5个最相关的维度进行简要评价。"
+    "只返回纯JSON对象，不要Markdown代码块，不要任何额外解释文字。"
+    "JSON字段必须为：portrait(纯文本画像), dimensions(数组)。"
+    "portrait中每行格式为'维度名：等级（依据）'，最后一句固定为'说明：以上是基于你提供资料的初步分析，后续岗位推荐将以此为基础。'"
+    "dimensions数组每项必须包含name、level、confidence、evidence。"
+    "level只能使用'较强'、'一般'、'待补充'之一；confidence只能使用'高'、'中'、'低'之一；evidence用一句简短中文说明依据。"
 )
 
 PORTRAIT_TAIL = (
@@ -474,8 +496,92 @@ PORTRAIT_TAIL = (
 )
 
 
+DEFAULT_PORTRAIT_TEXT = (
+    "专业基础：待补充（等待资料补充）\n"
+    "实践能力：待补充（等待资料补充）\n"
+    "学习背景：待补充（等待资料补充）\n"
+    "沟通协作：待补充（等待资料补充）\n\n"
+    "说明：以上是基于你提供资料的初步分析，后续岗位推荐将以此为基础。"
+)
+
+DEFAULT_PORTRAIT_DIMENSIONS: list[dict[str, str]] = [
+    {"name": "专业基础", "level": "待补充", "confidence": "低", "evidence": "等待资料补充"},
+    {"name": "实践能力", "level": "待补充", "confidence": "低", "evidence": "等待资料补充"},
+    {"name": "学习背景", "level": "待补充", "confidence": "低", "evidence": "等待资料补充"},
+    {"name": "沟通协作", "level": "待补充", "confidence": "低", "evidence": "等待资料补充"},
+]
+
+
+def _clean_json_text(text: str) -> str:
+    cleaned = text.strip()
+    if cleaned.startswith("```"):
+        cleaned = re.sub(r"^```(?:json)?\s*\n?", "", cleaned)
+        cleaned = re.sub(r"\n?```\s*$", "", cleaned)
+        cleaned = cleaned.strip()
+    return cleaned
+
+
+def _normalize_level(value: Any) -> str:
+    raw = str(value or "").strip()
+    if raw == "较强":
+        return "较强"
+    if raw in ("一般", "中等", "待确认"):
+        return "一般"
+    if "强" in raw:
+        return "较强"
+    if "待" in raw or "弱" in raw or "不足" in raw:
+        return "待补充"
+    return "待补充"
+
+
+def _normalize_confidence(value: Any) -> str:
+    raw = str(value or "").strip()
+    if raw in ("高", "中", "低"):
+        return raw
+    if "高" in raw:
+        return "高"
+    if "中" in raw:
+        return "中"
+    return "低"
+
+
+def _normalize_dimensions(value: Any) -> list[dict[str, str]]:
+    if not isinstance(value, list):
+        return [dict(item) for item in DEFAULT_PORTRAIT_DIMENSIONS]
+
+    normalized: list[dict[str, str]] = []
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("name", "")).strip()
+        if not name:
+            continue
+        normalized.append({
+            "name": name[:20],
+            "level": _normalize_level(item.get("level")),
+            "confidence": _normalize_confidence(item.get("confidence")),
+            "evidence": str(item.get("evidence") or "等待资料补充").strip()[:120],
+        })
+
+    if len(normalized) < 3:
+        return [dict(item) for item in DEFAULT_PORTRAIT_DIMENSIONS]
+    return normalized[:5]
+
+
+def _normalize_portrait_response(result: Any) -> dict[str, Any]:
+    if not isinstance(result, dict):
+        return {
+            "portrait": DEFAULT_PORTRAIT_TEXT,
+            "dimensions": [dict(item) for item in DEFAULT_PORTRAIT_DIMENSIONS],
+        }
+
+    portrait = str(result.get("portrait") or "").strip() or DEFAULT_PORTRAIT_TEXT
+    dimensions = _normalize_dimensions(result.get("dimensions"))
+    return {"portrait": portrait, "dimensions": dimensions}
+
+
 @router.post("/generate_portrait")
-async def generate_portrait(request: PortraitRequest) -> dict[str, str]:
+async def generate_portrait(request: PortraitRequest) -> dict[str, Any]:
     try:
         field_lines = [
             f"学校：{request.school or '未填写'}",
@@ -494,19 +600,15 @@ async def generate_portrait(request: PortraitRequest) -> dict[str, str]:
             {"role": "user", "content": user_content},
         ]
 
-        portrait_text = await chat(messages)
-        return {"portrait": portrait_text}
-    except Exception:
+        llm_response = await chat(messages)
+        result = _json.loads(_clean_json_text(llm_response))
+        return _normalize_portrait_response(result)
+    except Exception as exc:
+        print(f"[portrait] 生成或解析失败: {exc}", flush=True)
         # Demo 模式或无 API 密钥时返回默认画像
         return {
-            "portrait": (
-                "算法思维：待确认（等待资料补充）\n"
-                "系统设计：待确认（等待资料补充）\n"
-                "工程实践：待确认（等待资料补充）\n"
-                "项目完整度：待确认（等待资料补充）\n"
-                "职业意向：待确认（等待资料补充）\n\n"
-                "说明：以上是基于你提供资料的初步分析，后续岗位推荐将以此为基础。"
-            )
+            "portrait": DEFAULT_PORTRAIT_TEXT,
+            "dimensions": [dict(item) for item in DEFAULT_PORTRAIT_DIMENSIONS],
         }
 
 
