@@ -8,6 +8,7 @@ import {
 } from "react-router-dom";
 
 import DemoPage from "./pages/DemoPage";
+import MainFlow from "./pages/MainFlow";
 
 
 function HomePage() {
@@ -50,7 +51,7 @@ function App() {
 
       <Routes>
         <Route path="/" element={<HomePage />} />
-        <Route path="/demo" element={<DemoPage />} />
+        <Route path="/demo" element={<MainFlow />} />
       </Routes>
     </BrowserRouter>
   );
