@@ -46,6 +46,11 @@ demo_scenarios: dict[str, dict[str, Any]] = {
             "简历中无算法竞赛获奖记录",
             "深度学习相关课程成绩未体现",
         ],
+        "alt_suggestions": [
+            "建议完成一个 PyTorch 或 TensorFlow 端到端 AI 项目案例",
+            "建议补充算法竞赛、Kaggle 或编程挑战记录",
+            "建议补充深度学习课程成绩、课程项目或模型复现证明",
+        ],
         "appeal_reason": "我自学了 PyTorch 并复现了 ResNet，未来希望从事 AI 方向",
         "archive": [
             {
@@ -147,6 +152,11 @@ demo_scenarios: dict[str, dict[str, Any]] = {
             "未参加数学建模或统计类竞赛",
             "笔试中 SQL 能力未体现",
         ],
+        "alt_suggestions": [
+            "建议完成一个 Python 数据分析项目并产出可展示报告",
+            "建议参加数学建模、统计建模或数据竞赛补强建模经历",
+            "建议补充 SQL 查询练习、数据库项目或相关测评成绩",
+        ],
         "appeal_reason": "我在课外完成了数据分析师训练营，并拿到证书，希望重新定岗",
         "archive": [
             {
@@ -247,6 +257,11 @@ demo_scenarios: dict[str, dict[str, Any]] = {
             "无产品相关实习或项目经历",
             "笔试中无产品思维题考察",
             "职业问卷未体现产品经理核心能力",
+        ],
+        "alt_suggestions": [
+            "建议补充产品实习、校园产品项目或完整产品方案案例",
+            "建议完成用户需求分析、竞品分析和产品设计题训练",
+            "建议在职业材料中补充用户洞察、沟通协作和项目推进案例",
         ],
         "appeal_reason": "我自学了产品经理全套课程，并主导过校内 APP 开发项目，附上作品集链接，希望进入产品岗位",
         "archive": [
