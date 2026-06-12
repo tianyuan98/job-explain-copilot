@@ -34,17 +34,83 @@ function MainFlow() {
   const [parseError, setParseError] = useState("");
   const [generatedPortrait, setGeneratedPortrait] = useState("");
   const [generatingPortrait, setGeneratingPortrait] = useState(false);
+  const [generatedRecommendation, setGeneratedRecommendation] = useState(null);
+  const [generatingRecommendation, setGeneratingRecommendation] = useState(false);
 
   const fileInputRef = useRef(null);
 
   const scenario = detail?.scenario;
   const archive = detail?.archive || scenario?.archive || [];
   const portrait = detail?.portrait || scenario?.portrait || generatedPortrait || "";
-  const matchScore = scenario?.match_score || 0;
+  const matchScore = scenario?.match_score || generatedRecommendation?.match_score || 0;
+
+  // 统一推荐数据源：demo模式用 scenario，手动模式用 generatedRecommendation
+  const recommendation = scenario?.recommended_job
+    ? {
+        recommended_job: scenario.recommended_job,
+        match_score: scenario.match_score,
+        key_reasons: scenario.key_reasons || [],
+        alternative_job: scenario.alternative_job,
+        alt_match_score: scenario.alt_match_score,
+        alt_gaps: scenario.alt_gaps || [],
+        alt_suggestions: [],
+        explanation: detail?.explanation || "",
+        advice: detail?.advice || "",
+        name: scenario.name,
+      }
+    : generatedRecommendation
+      ? {
+          recommended_job: generatedRecommendation.recommended_job,
+          match_score: generatedRecommendation.match_score,
+          key_reasons: generatedRecommendation.key_reasons || [],
+          alternative_job: generatedRecommendation.alternative_job,
+          alt_match_score: generatedRecommendation.alt_match_score,
+          alt_gaps: generatedRecommendation.alt_gaps || [],
+          alt_suggestions: generatedRecommendation.alt_suggestions || [],
+          explanation: "",
+          advice: "",
+          name: extractField("姓名"),
+        }
+      : null;
 
   const abilityCards = useMemo(() => parsePortrait(portrait), [portrait]);
 
-  // 从表单字段中提取所需参数
+  async function handleStartMatching() {
+    // 情况 A：示例数据模式 → 已有推荐数据，直接进入步骤4
+    if (scenario?.recommended_job) {
+      setCurrentStep(4);
+      return;
+    }
+
+    // 情况 B：手动模式 → 调用 API 生成推荐
+    setGeneratingRecommendation(true);
+    try {
+      const payload = {
+        name: extractField("姓名"),
+        school: extractField("学校"),
+        major: extractField("专业"),
+        degree: extractField("学历"),
+        algorithm_rank: extractField("算法笔试排名"),
+        internship: extractField("实习经历"),
+        projects: extractField("项目经历"),
+        certificates: extractField("证书/补充") || extractField("补充信息"),
+        career_interest: extractField("职业意向"),
+        portrait: portrait,
+      };
+      const response = await axios.post(`${API_BASE_URL}/api/demo/generate_recommendation`, payload);
+      if (response.data?.error) {
+        setError(response.data.message || "岗位推荐生成失败，请重试");
+      } else {
+        setGeneratedRecommendation(response.data);
+        setCurrentStep(4);
+      }
+    } catch (e) {
+      setError("岗位推荐生成失败，请重试");
+    } finally {
+      setGeneratingRecommendation(false);
+    }
+  }
+
   function extractField(label) {
     const found = formFields.find((f) => f.label === label);
     return found?.value || "";
@@ -194,17 +260,17 @@ function MainFlow() {
   function generateAppealReport(event) {
     event.preventDefault();
 
-    if (!scenario) {
+    if (!recommendation) {
       return;
     }
 
     setAppealReport(
       [
-        `学生姓名：${scenario.name}`,
-        `原推荐岗位：${scenario.recommended_job}`,
-        `申诉目标岗位：${appealTarget || scenario.alternative_job}`,
+        `学生姓名：${recommendation.name}`,
+        `原推荐岗位：${recommendation.recommended_job}`,
+        `申诉目标岗位：${appealTarget || recommendation.alternative_job}`,
         `补充说明摘要：${appealReason || "学生希望补充更多材料供 HR 复审。"}`,
-        `匹配度变化：当前岗位 ${scenario.match_score} 分，目标岗位 ${scenario.alt_match_score} 分`,
+        `匹配度变化：当前岗位 ${recommendation.match_score} 分，目标岗位 ${recommendation.alt_match_score} 分`,
         "结语：建议人工复审",
       ].join("\n")
     );
@@ -397,10 +463,11 @@ function MainFlow() {
               </button>
               <button
                 className="primary-btn"
-                onClick={() => setCurrentStep(4)}
+                onClick={handleStartMatching}
                 type="button"
+                disabled={generatingRecommendation}
               >
-                开始岗位匹配 →
+                {generatingRecommendation ? "正在分析并生成岗位推荐…" : "开始岗位匹配 →"}
               </button>
             </div>
           </section>
@@ -414,7 +481,7 @@ function MainFlow() {
               <p>推荐结果会说明为什么匹配，也给你探索和申诉的入口。</p>
             </div>
 
-            {scenario ? (
+            {recommendation ? (
               <article className="match-card">
                 <div className="match-top">
                   <div
@@ -433,13 +500,13 @@ function MainFlow() {
 
                   <div className="job-copy">
                     <p className="eyebrow">推荐岗位</p>
-                    <h2>{scenario.recommended_job}</h2>
-                    <p>{detail?.explanation}</p>
+                    <h2>{recommendation.recommended_job}</h2>
+                    {recommendation.explanation && <p>{recommendation.explanation}</p>}
                   </div>
                 </div>
 
                 <ul className="reason-list">
-                  {scenario.key_reasons.map((reason) => (
+                  {recommendation.key_reasons.map((reason) => (
                     <li key={reason}>
                       <span>🔹</span>
                       <p>{reason}</p>
@@ -473,25 +540,33 @@ function MainFlow() {
         )}
       </section>
 
-      {showExploreModal && scenario && (
+      {showExploreModal && recommendation && (
         <Modal title="探索其他可能岗位" onClose={() => setShowExploreModal(false)}>
           <p className="eyebrow">目标岗位</p>
-          <h3 className="modal-job">{scenario.alternative_job}</h3>
+          <h3 className="modal-job">{recommendation.alternative_job}</h3>
           <div className="score-pills">
-            <span>匹配度 {scenario.alt_match_score}</span>
-            <span>当前推荐 {scenario.match_score}</span>
+            <span>匹配度 {recommendation.alt_match_score}</span>
+            <span>当前推荐 {recommendation.match_score}</span>
           </div>
           <div className="modal-block">
             <h4>差距列表</h4>
             <ul className="gap-list">
-              {scenario.alt_gaps.map((gap) => (
+              {recommendation.alt_gaps.map((gap) => (
                 <li key={gap}>❌ {gap}</li>
               ))}
             </ul>
           </div>
           <div className="modal-block">
             <h4>建议</h4>
-            <p className="pre-line">{detail?.advice}</p>
+            {recommendation.alt_suggestions && recommendation.alt_suggestions.length > 0 ? (
+              <ul className="gap-list">
+                {recommendation.alt_suggestions.map((s) => (
+                  <li key={s}>💡 {s}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="pre-line">{recommendation.advice}</p>
+            )}
           </div>
           <button className="primary-btn wide" type="button">
             发起岗位复审
@@ -499,7 +574,7 @@ function MainFlow() {
         </Modal>
       )}
 
-      {showAppealModal && scenario && (
+      {showAppealModal && recommendation && (
         <Modal title="申诉助手" onClose={() => setShowAppealModal(false)}>
           <form className="appeal-form" onSubmit={generateAppealReport}>
             <label>
