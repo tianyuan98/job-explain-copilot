@@ -34,6 +34,8 @@ demo_scenarios: dict[str, dict[str, Any]] = {
         },
         "recommended_job": "云计算研发工程师",
         "match_score": 87,
+        "match_range": "高匹配 85-90区间",
+        "match_anchor": "历届录取平均82-88",
         "key_reasons": [
             "笔试算法成绩位列前15%，逻辑能力强",
             "实习经历直接覆盖云原生与微服务开发",
@@ -41,6 +43,7 @@ demo_scenarios: dict[str, dict[str, Any]] = {
         ],
         "alternative_job": "AI 算法工程师",
         "alt_match_score": 72,
+        "alt_match_range": "中高匹配 70-75区间",
         "alt_gaps": [
             "缺少机器学习相关项目经历",
             "简历中无算法竞赛获奖记录",
@@ -140,6 +143,8 @@ demo_scenarios: dict[str, dict[str, Any]] = {
         },
         "recommended_job": "前端开发工程师",
         "match_score": 82,
+        "match_range": "高匹配 80-85区间",
+        "match_anchor": "历届录取平均78-84",
         "key_reasons": [
             "实习经历与前端岗位高度匹配",
             "笔试中 HTML/CSS/JS 模块得分前20%",
@@ -147,6 +152,7 @@ demo_scenarios: dict[str, dict[str, Any]] = {
         ],
         "alternative_job": "数据科学工程师",
         "alt_match_score": 55,
+        "alt_match_range": "中匹配 55-60区间",
         "alt_gaps": [
             "缺乏 Python 数据分析项目经验",
             "未参加数学建模或统计类竞赛",
@@ -246,6 +252,8 @@ demo_scenarios: dict[str, dict[str, Any]] = {
         },
         "recommended_job": "硬件测试工程师",
         "match_score": 78,
+        "match_range": "中高匹配 75-80区间",
+        "match_anchor": "历届录取平均72-80",
         "key_reasons": [
             "实习岗位与硬件测试直接对口",
             "笔试中电路、信号相关题目得分较高",
@@ -253,6 +261,7 @@ demo_scenarios: dict[str, dict[str, Any]] = {
         ],
         "alternative_job": "产品经理",
         "alt_match_score": 40,
+        "alt_match_range": "待提升 40-45区间",
         "alt_gaps": [
             "无产品相关实习或项目经历",
             "笔试中无产品思维题考察",
@@ -344,6 +353,54 @@ demo_scenarios: dict[str, dict[str, Any]] = {
 }
 
 
+def _range_for_level(level: Any) -> str:
+    text = str(level or "")
+    if "强" in text or "寮" in text:
+        return "高区间80-90"
+    if "一般" in text or "中" in text or "鑸" in text:
+        return "中区间65-75"
+    return "待补充区间<60"
+
+
+def _evidence_count_for_dimension(item: dict[str, Any], default: int = 1) -> int:
+    try:
+        count = int(item.get("evidence_count", default))
+    except (TypeError, ValueError):
+        count = default
+    return max(0, count)
+
+
+def _ensure_dimension_v3_fields(dimensions: Any) -> list[dict[str, Any]]:
+    if not isinstance(dimensions, list):
+        return [dict(item) for item in DEFAULT_PORTRAIT_DIMENSIONS]
+    enriched: list[dict[str, Any]] = []
+    for index, item in enumerate(dimensions):
+        if not isinstance(item, dict):
+            continue
+        next_item = dict(item)
+        next_item["range"] = str(next_item.get("range") or _range_for_level(next_item.get("level"))).strip()
+        next_item["evidence_count"] = _evidence_count_for_dimension(next_item, 3 if index < 3 else 2)
+        enriched.append(next_item)
+    return enriched or [dict(item) for item in DEFAULT_PORTRAIT_DIMENSIONS]
+
+
+def _ensure_scenario_v3_fields() -> None:
+    ranges = {
+        "demo_01": ("高匹配 85-90区间", "历届录取平均82-88", "中高匹配 70-75区间"),
+        "demo_02": ("高匹配 80-85区间", "历届录取平均78-84", "中匹配 55-60区间"),
+        "demo_03": ("中高匹配 75-80区间", "历届录取平均72-80", "待提升 40-45区间"),
+    }
+    for scenario_id, scenario in demo_scenarios.items():
+        match_range, anchor, alt_range = ranges.get(
+            scenario_id,
+            ("中匹配 65-75区间", "历届录取平均65-75", "待评估区间"),
+        )
+        scenario.setdefault("match_range", match_range)
+        scenario.setdefault("match_anchor", anchor)
+        scenario.setdefault("alt_match_range", alt_range)
+        scenario["dimensions"] = _ensure_dimension_v3_fields(scenario.get("dimensions"))
+
+
 @router.get("/scenarios")
 def list_demo_scenarios() -> list[dict[str, str]]:
     return [
@@ -366,7 +423,7 @@ def explain_demo_scenario(request: ExplainRequest) -> dict[str, Any]:
         "scenario": scenario,
         "archive": scenario["archive"],
         "portrait": scenario["portrait"],
-        "dimensions": scenario.get("dimensions", []),
+        "dimensions": _ensure_dimension_v3_fields(scenario.get("dimensions", [])),
         "explanation": scenario.get("explanation", ""),
         "advice": scenario.get("advice", ""),
         "appeal_report": scenario.get("appeal_report", ""),
@@ -505,6 +562,12 @@ PORTRAIT_SYSTEM_PROMPT = (
     "level只能使用'较强'、'一般'、'待补充'之一；confidence只能使用'高'、'中'、'低'之一；evidence用一句简短中文说明依据。"
 )
 
+PORTRAIT_SYSTEM_PROMPT += (
+    "dimensions数组每项必须额外包含range和evidence_count。"
+    "range使用区间表达，例如'高区间80-90'、'中区间65-75'、'待补充区间<60'；"
+    "evidence_count为支撑数据条数整数，例如3。"
+)
+
 PORTRAIT_TAIL = (
     "请根据该学生的职业意向或经历特征，自行判断最合适的分析维度"
     "（如技术类岗位可用算法思维、工程实践等；非技术类岗位可用沟通协调、专业知识、实习匹配度等），"
@@ -526,6 +589,12 @@ DEFAULT_PORTRAIT_DIMENSIONS: list[dict[str, str]] = [
     {"name": "学习背景", "level": "待补充", "confidence": "低", "evidence": "等待资料补充"},
     {"name": "沟通协作", "level": "待补充", "confidence": "低", "evidence": "等待资料补充"},
 ]
+
+for _default_dimension in DEFAULT_PORTRAIT_DIMENSIONS:
+    _default_dimension.setdefault("range", "待补充区间<60")
+    _default_dimension.setdefault("evidence_count", 0)
+
+_ensure_scenario_v3_fields()
 
 
 def _clean_json_text(text: str) -> str:
@@ -592,7 +661,7 @@ def _normalize_portrait_response(result: Any) -> dict[str, Any]:
         }
 
     portrait = str(result.get("portrait") or "").strip() or DEFAULT_PORTRAIT_TEXT
-    dimensions = _normalize_dimensions(result.get("dimensions"))
+    dimensions = _ensure_dimension_v3_fields(_normalize_dimensions(result.get("dimensions")))
     return {"portrait": portrait, "dimensions": dimensions}
 
 
@@ -723,12 +792,21 @@ RECOMMEND_SYSTEM_PROMPT = (
     "所有7个字段都必须有值，不允许省略。"
 )
 
+RECOMMEND_SYSTEM_PROMPT += (
+    "返回JSON还必须包含match_range、match_anchor、alt_match_range。"
+    "match_range使用区间表达，例如'高匹配 85-90区间'；"
+    "match_anchor用于给出历史锚点，例如'历届录取平均82-88'。"
+)
+
 RECOMMEND_FALLBACK: dict[str, Any] = {
     "recommended_job": "未识别到合适岗位",
     "match_score": 50,
+    "match_range": "待评估 50-60区间",
+    "match_anchor": "暂无历史锚点",
     "key_reasons": ["缺少足够信息进行精准推荐", "建议补充项目经历", "可尝试联系 HR 获取更多岗位信息"],
     "alternative_job": "通用岗位",
     "alt_match_score": 50,
+    "alt_match_range": "待评估 50-60区间",
     "alt_gaps": ["缺少针对性经历"],
     "alt_suggestions": ["完善简历后再试", "添加更多实习或项目经历"],
 }
