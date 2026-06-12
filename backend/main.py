@@ -1,11 +1,11 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
+load_dotenv()  # MUST be before other imports that use os.getenv()
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
 from api.demo import router as demo_router
-
-
-load_dotenv()
 
 app = FastAPI(title="Job Explain Copilot API")
 
