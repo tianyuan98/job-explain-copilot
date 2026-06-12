@@ -574,6 +574,7 @@ function MainFlow() {
                 onToggleTip={(index) => setActiveRadarTip(activeRadarTip === index ? null : index)}
               />
 
+              <h3 className="grid-section-title">能力维度概览（点击"我觉得不准"可反馈异议）</h3>
               <div className="ability-grid">
                 {abilityCards.map((item) => (
                   <button
@@ -645,7 +646,21 @@ function MainFlow() {
                 </div>
               )}
 
-              <div className="portrait-text">{renderPortraitText(portrait)}</div>
+              <div className="dimension-details">
+                {radarDimensions.length > 0 ? (
+                  radarDimensions.map((dim) => (
+                    <div className="dimension-card" key={dim.name}>
+                      <div className="dim-card-header">
+                        <strong>{dim.name}</strong>
+                        <span className="dim-confidence">置信度 {dim.confidence}</span>
+                      </div>
+                      <p>{dim.evidence}</p>
+                    </div>
+                  ))
+                ) : (
+                  <div className="portrait-text">{renderPortraitText(portrait)}</div>
+                )}
+              </div>
             </article>
 
             <p className="hint">以上分析将作为岗位匹配的基础，如有异议可返回修改。</p>
@@ -1155,7 +1170,12 @@ function AbilityRadar({ dimensions, activeIndex, onToggleTip }) {
                   tabIndex="0"
                   aria-label={`查看${item.name}依据`}
                 />
-                <circle className="radar-dot" cx={point.x} cy={point.y} r="5" />
+                <circle
+                  className={`radar-dot ${item.level === "较强" ? "dot-high" : item.level === "一般" ? "dot-mid" : "dot-low"}`}
+                  cx={point.x}
+                  cy={point.y}
+                  r="5"
+                />
                 <text className="radar-label" textAnchor={anchor} x={labelPoint.x} y={labelPoint.y - 4}>
                   {item.name}
                 </text>
@@ -1642,6 +1662,10 @@ const styles = `
     pointer-events: none;
   }
 
+  .radar-dot.dot-high { fill: #38d9a9; }
+  .radar-dot.dot-mid { fill: #748ffc; }
+  .radar-dot.dot-low { fill: #ffc078; }
+
   .radar-hit {
     fill: transparent;
     cursor: pointer;
@@ -1711,6 +1735,12 @@ const styles = `
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 14px;
     margin-bottom: 20px;
+  }
+
+  .grid-section-title {
+    margin: 0 0 12px;
+    font-size: 15px;
+    color: #26324a;
   }
 
   .ability-item {
@@ -1886,6 +1916,51 @@ const styles = `
     font-size: 14px;
     line-height: 1.8;
     color: #42506a;
+  }
+
+  .dimension-details {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-top: 18px;
+  }
+
+  .dimension-card {
+    padding: 16px;
+    background: white;
+    border: 1px solid #edf0f9;
+    border-radius: 8px;
+    display: grid;
+    gap: 8px;
+  }
+
+  .dim-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .dim-card-header strong {
+    color: #26324a;
+    font-size: 15px;
+  }
+
+  .dim-confidence {
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: #f0f3ff;
+    color: #5c7cfa;
+    font-size: 11px;
+    font-weight: 900;
+  }
+
+  .dimension-card p {
+    margin: 0;
+    color: #60708b;
+    font-size: 13px;
+    line-height: 1.7;
   }
 
   .hint {
@@ -2207,7 +2282,8 @@ const styles = `
     }
 
     .stepper,
-    .ability-grid {
+    .ability-grid,
+    .dimension-details {
       grid-template-columns: 1fr 1fr;
     }
 
@@ -2238,7 +2314,8 @@ const styles = `
     }
 
     .stepper,
-    .ability-grid {
+    .ability-grid,
+    .dimension-details {
       grid-template-columns: 1fr;
     }
 
