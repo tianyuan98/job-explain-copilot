@@ -1,6 +1,7 @@
 from typing import Any
 from io import BytesIO
 import json as _json
+import re
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from pydantic import BaseModel
@@ -392,10 +393,23 @@ async def parse_resume(file: UploadFile = File(...)) -> dict[str, Any]:
                 "message": "简历内容无法识别，请确保上传的是文字版PDF，或尝试手动填写",
             }
 
-        # ---- 第二步：调用智谱 API ----
+        # ---- 第二步：清洗 & 截断文本（防止 input_length_too_long）----
+        # 1) 清理控制字符和多余空白
+        sanitized = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]', '', raw_text)
+        sanitized = re.sub(r'\n{3,}', '\n\n', sanitized)   # 压缩多余空行
+        sanitized = re.sub(r' {3,}', '  ', sanitized)      # 压缩多余空格
+        sanitized = sanitized.strip()
+
+        # 2) 截断到 4000 字符（留足 system prompt 和 response 的空间）
+        MAX_CHARS = 4000
+        if len(sanitized) > MAX_CHARS:
+            sanitized = sanitized[:MAX_CHARS]
+            print(f"[parse_resume] 文本已截断: {len(raw_text)} → {len(sanitized)} 字符", flush=True)
+
+        # ---- 第三步：调用智谱 API ----
         messages = [
             {"role": "system", "content": PARSE_SYSTEM_PROMPT},
-            {"role": "user", "content": raw_text},
+            {"role": "user", "content": sanitized},
         ]
 
         try:
@@ -405,7 +419,7 @@ async def parse_resume(file: UploadFile = File(...)) -> dict[str, Any]:
             print(f"[parse_resume] LLM 调用异常: {exc}", flush=True)
             return {"error": "llm_failed", "message": "AI 解析服务暂时不可用，请稍后重试或手动填写"}
 
-        # ---- 第三步：解析 JSON ----
+        # ---- 第四步：解析 JSON ----
         cleaned = llm_response.strip()
         if cleaned.startswith("```"):
             lines = cleaned.split("\n")
@@ -419,7 +433,7 @@ async def parse_resume(file: UploadFile = File(...)) -> dict[str, Any]:
             print(f"[parse_resume] JSON 解析失败, LLM 返回前200字: {llm_response[:200]}", flush=True)
             return {"error": "parse_failed", "message": "AI 解析暂时不可用，请稍后重试或手动填写"}
 
-        # ---- 第四步：标准化字段 ----
+        # ---- 第五步：标准化字段 ----
         normalized: dict[str, str] = {}
         for key in FALLBACK_RESULT:
             value = str(result.get(key, "")).strip()
