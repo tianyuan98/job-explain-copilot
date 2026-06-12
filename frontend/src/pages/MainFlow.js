@@ -108,8 +108,14 @@ function MainFlow() {
         clearInterval(stageTimer);
         setParseStage("");
         setParsing(false);
-        setResumeUploaded(true);
-        setFormFields(parsedToFields(response.data));
+        if (response.data?.error) {
+          setResumeUploaded(true);
+          setParseError(response.data.message || "简历解析失败，请手动填写基本信息");
+        } else {
+          setParseError("");
+          setResumeUploaded(true);
+          setFormFields(parsedToFields(response.data));
+        }
       })
       .catch(() => {
         clearInterval(stageTimer);
@@ -117,7 +123,6 @@ function MainFlow() {
         setParsing(false);
         setResumeUploaded(true);
         setParseError("简历解析失败，请手动填写基本信息");
-        // 兜底：用文件名推断
         setFormFields(defaultResumeFields(file.name));
       });
 
