@@ -536,6 +536,7 @@ function toEmptyField(field) {
 function buildFields(fullDetail) {
   const scenario = fullDetail.scenario;
   const archive = fullDetail.archive || scenario.archive || [];
+
   const archiveFields = archive.map((item, index) => ({
     key: `archive_${index}_${item.label}`,
     label: item.label,
@@ -544,47 +545,35 @@ function buildFields(fullDetail) {
     editable: item.editable,
   }));
 
+  const archiveLabels = new Set(archive.map((a) => a.label));
+
+  // 从 archive 中提取特定条目
+  const certItem = archive.find((a) => a.label === "证书/补充");
+
   return [
-    {
+    // 姓名：不在 archive 中，单独从 scenario 填入
+    ...(archiveLabels.has("姓名") ? [] : [{
       key: "name",
       label: "姓名",
       value: scenario.name || "",
       source: "学生填写",
       editable: true,
-    },
-    {
-      key: "school",
-      label: "学校",
-      value: "腾讯校园招聘候选人",
-      source: "学生填写",
-      editable: true,
-    },
-    {
-      key: "major",
-      label: "专业",
-      value: "",
-      source: "学生填写",
-      editable: true,
-    },
-    {
-      key: "degree",
-      label: "学历",
-      value: "",
-      source: "学生填写",
-      editable: true,
-    },
+    }]),
+    // archive 所有条目，一一对应展示（去重基础字段）
     ...archiveFields,
-    {
+    // 项目经历：archive 没有再补充
+    ...(archiveLabels.has("项目经历") ? [] : [{
       key: "project",
       label: "项目经历",
       value: scenario.profile?.internship || "",
       source: "来自简历",
       editable: true,
-    },
+    }]),
+    // 补充信息：用 archive 的证书/补充，不用 appeal_reason
     {
       key: "extra",
       label: "补充信息",
-      value: scenario.appeal_reason || "",
+      value: certItem?.value || "",
       source: "学生补充",
       editable: true,
     },
