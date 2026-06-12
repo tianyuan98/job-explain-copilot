@@ -28,6 +28,10 @@ function MainFlow() {
   const [appealTarget, setAppealTarget] = useState("");
   const [appealReason, setAppealReason] = useState("");
   const [appealReport, setAppealReport] = useState("");
+  const [appealStep, setAppealStep] = useState("form");
+  const [appealNegotiationText, setAppealNegotiationText] = useState("");
+  const [appealSupplement, setAppealSupplement] = useState("");
+  const [appealGenerating, setAppealGenerating] = useState(false);
   const [resumeFileName, setResumeFileName] = useState("");
   const [parsing, setParsing] = useState(false);
   const [parseStage, setParseStage] = useState("");
@@ -184,7 +188,10 @@ function MainFlow() {
       setFormFields(buildFields(fullDetail));
       setAppealTarget(fullDetail.scenario.alternative_job || "");
       setAppealReason(fullDetail.scenario.appeal_reason || "");
-      setAppealReport("");
+      setAppealReport(fullDetail.appeal_report || "");
+      setAppealNegotiationText("");
+      setAppealSupplement("");
+      setAppealStep("form");
       setLoadedExample(true);
       setResumeUploaded(true);
       setCurrentStep(1);
@@ -309,23 +316,94 @@ function MainFlow() {
     setDisputeMessage("");
   }
 
-  function generateAppealReport(event) {
+  function buildAppealPayload() {
+    return {
+      name: recommendation?.name || "",
+      original_job: recommendation?.recommended_job || "",
+      target_job: appealTarget || recommendation?.alternative_job || "",
+      reason: appealReason,
+      orig_score: recommendation?.match_score || 0,
+      target_score: recommendation?.alt_match_score || 0,
+    };
+  }
+
+  function buildAppealNegotiation(payload) {
+    const gap = Math.abs((payload.orig_score || 0) - (payload.target_score || 0));
+    return `AI 已分析你的申诉，你的意向岗位「${payload.target_job || "目标岗位"}」与当前推荐岗位「${payload.original_job || "原推荐岗位"}」匹配度差距为 ${gap} 分。若你有新的项目、证书、作品集或面试表现材料，可以继续申诉并进入人工复核；若暂无补充材料，也可以先保留当前推荐结果。是否坚持申诉？`;
+  }
+
+  function buildLocalAppealReport(payload) {
+    return [
+      "【学生申诉结构化报告】",
+      "",
+      "一、学生基本信息",
+      `- 学生姓名：${payload.name || "未填写"}`,
+      "",
+      "二、原推荐岗位信息",
+      `- 原推荐岗位：${payload.original_job || "未填写"}`,
+      "",
+      "三、申诉目标岗位信息",
+      `- 申诉目标岗位：${payload.target_job || "未填写"}`,
+      "",
+      "四、补充说明摘要",
+      `- ${payload.reason || "学生希望补充更多材料供 HR 复审。"}`,
+      "",
+      "五、岗位匹配度变化",
+      `- 原岗位匹配分：${payload.orig_score}`,
+      `- 目标岗位匹配分：${payload.target_score}`,
+      "",
+      "六、结语",
+      "- 建议人工复审",
+    ].join("\n");
+  }
+
+  function openAppealModal() {
+    if (appealReport) {
+      const payload = buildAppealPayload();
+      setAppealNegotiationText((current) => current || buildAppealNegotiation(payload));
+      setAppealStep("negotiate");
+    } else {
+      setAppealStep("form");
+    }
+    setShowAppealModal(true);
+  }
+
+  function resetAppealFlow({ close = true } = {}) {
+    setAppealStep("form");
+    setAppealNegotiationText("");
+    setAppealSupplement("");
+    setAppealGenerating(false);
+    if (!detail?.appeal_report && !scenario?.appeal_report) {
+      setAppealReport("");
+    }
+    if (close) {
+      setShowAppealModal(false);
+    }
+  }
+
+  async function handleAppealSubmit(event) {
     event.preventDefault();
 
     if (!recommendation) {
       return;
     }
 
-    setAppealReport(
-      [
-        `学生姓名：${recommendation.name}`,
-        `原推荐岗位：${recommendation.recommended_job}`,
-        `申诉目标岗位：${appealTarget || recommendation.alternative_job}`,
-        `补充说明摘要：${appealReason || "学生希望补充更多材料供 HR 复审。"}`,
-        `匹配度变化：当前岗位 ${recommendation.match_score} 分，目标岗位 ${recommendation.alt_match_score} 分`,
-        "结语：建议人工复审",
-      ].join("\n")
-    );
+    const payload = buildAppealPayload();
+    setAppealGenerating(true);
+
+    try {
+      const response = await axios.post(`${API_BASE_URL}/api/demo/generate_appeal_report`, payload);
+      setAppealReport(response.data?.report || buildLocalAppealReport(payload));
+      setAppealNegotiationText(response.data?.negotiation || buildAppealNegotiation(payload));
+      setAppealStep("negotiate");
+    } catch (e) {
+      setError("申诉报告生成失败，请重试");
+      setAppealReport(buildLocalAppealReport(payload));
+      setAppealNegotiationText(buildAppealNegotiation(payload));
+      setAppealStep("negotiate");
+    } finally {
+      setAppealGenerating(false);
+    }
   }
 
   return (
@@ -643,7 +721,7 @@ function MainFlow() {
                   </button>
                   <button
                     className="text-link"
-                    onClick={() => setShowAppealModal(true)}
+                    onClick={openAppealModal}
                     type="button"
                   >
                     觉得推荐不合适？点此发起申诉
@@ -694,37 +772,104 @@ function MainFlow() {
       )}
 
       {showAppealModal && recommendation && (
-        <Modal title="申诉助手" onClose={() => setShowAppealModal(false)}>
-          <form className="appeal-form" onSubmit={generateAppealReport}>
-            <label>
-              意向岗位
-              <input
-                onChange={(event) => setAppealTarget(event.target.value)}
-                placeholder="例如：AI算法工程师"
-                value={appealTarget}
-              />
-            </label>
-            <label>
-              补充说明
-              <textarea
-                onChange={(event) => setAppealReason(event.target.value)}
-                placeholder="写下你希望补充给 HR 的经历、项目或作品集信息"
-                rows="5"
-                value={appealReason}
-              />
-            </label>
-            <button className="primary-btn" type="submit">
-              生成报告
-            </button>
-          </form>
+        <Modal title="申诉助手" onClose={() => resetAppealFlow()}>
+          <AppealSteps current={appealStep} />
 
-          {appealReport && (
-            <>
-              <blockquote className="appeal-preview">{appealReport}</blockquote>
-              <button className="primary-btn wide" type="button">
-                提交申诉（演示）
+          {appealStep === "form" && (
+            <form className="appeal-form" onSubmit={handleAppealSubmit}>
+              <label>
+                意向岗位
+                <input
+                  onChange={(event) => setAppealTarget(event.target.value)}
+                  placeholder="例如：AI算法工程师"
+                  value={appealTarget}
+                />
+              </label>
+              <label>
+                补充说明
+                <textarea
+                  onChange={(event) => setAppealReason(event.target.value)}
+                  placeholder="写下你希望补充给 HR 的经历、项目或作品集信息"
+                  rows="5"
+                  value={appealReason}
+                />
+              </label>
+              <button className="primary-btn" disabled={appealGenerating} type="submit">
+                {appealGenerating ? "生成中…" : "生成申诉报告"}
               </button>
+            </form>
+          )}
+
+          {appealStep === "negotiate" && (
+            <>
+              <div className="appeal-negotiate">
+                <strong>AI 协商建议</strong>
+                <p>{appealNegotiationText}</p>
+              </div>
+              <blockquote className="appeal-preview">{appealReport}</blockquote>
+              <div className="appeal-actions">
+                <button
+                  className="primary-btn"
+                  onClick={() => setAppealStep("supplement")}
+                  type="button"
+                >
+                  坚持申诉 →
+                </button>
+                <button className="ghost-btn" onClick={() => resetAppealFlow()} type="button">
+                  放弃申诉
+                </button>
+              </div>
             </>
+          )}
+
+          {appealStep === "supplement" && (
+            <div className="appeal-stage">
+              <p className="appeal-status">请补充更多证明材料，将转交部门面试官复核。</p>
+              <label>
+                补充材料说明
+                <textarea
+                  onChange={(event) => setAppealSupplement(event.target.value)}
+                  placeholder="例如：新增项目链接、竞赛证书、作品集、课程成绩或面试表现说明"
+                  rows="5"
+                  value={appealSupplement}
+                />
+              </label>
+              <div className="appeal-upload-placeholder">
+                文件上传占位（演示）：作品集、证书、项目截图等
+              </div>
+              <button
+                className="primary-btn wide"
+                onClick={() => setAppealStep("committee")}
+                type="button"
+              >
+                提交补充材料并转人工
+              </button>
+            </div>
+          )}
+
+          {appealStep === "committee" && (
+            <div className="appeal-stage">
+              <p className="appeal-status muted">已转交部门面试官复核（演示）</p>
+              <p className="appeal-status">部门无法裁决，将提交校招委员会集体审视。</p>
+              <blockquote className="appeal-preview">{appealReport}</blockquote>
+              <button
+                className="primary-btn wide"
+                onClick={() => setAppealStep("done")}
+                type="button"
+              >
+                确认提交
+              </button>
+              <p className="appeal-status muted">已提交至校招委员会（演示）</p>
+            </div>
+          )}
+
+          {appealStep === "done" && (
+            <div className="appeal-stage done">
+              <p className="appeal-status">你的申诉已被记录，我们将在 5 个工作日内反馈结果。</p>
+              <button className="primary-btn wide" onClick={() => resetAppealFlow()} type="button">
+                关闭
+              </button>
+            </div>
           )}
         </Modal>
       )}
@@ -1041,6 +1186,30 @@ function AbilityRadar({ dimensions, activeIndex, onToggleTip }) {
         )}
       </div>
     </section>
+  );
+}
+
+function AppealSteps({ current }) {
+  const steps = [
+    { key: "form", label: "填写" },
+    { key: "negotiate", label: "AI协商" },
+    { key: "supplement", label: "条件人工" },
+    { key: "committee", label: "集体审视" },
+    { key: "done", label: "完成" },
+  ];
+  const currentIndex = steps.findIndex((item) => item.key === current);
+
+  return (
+    <div className="appeal-steps" aria-label="申诉流程">
+      {steps.map((item, index) => (
+        <span
+          className={`${index === currentIndex ? "active" : ""} ${index < currentIndex ? "done" : ""}`}
+          key={item.key}
+        >
+          {item.label}
+        </span>
+      ))}
+    </div>
   );
 }
 
@@ -1912,16 +2081,110 @@ const styles = `
     gap: 16px;
   }
 
-  .appeal-form label {
+  .appeal-form label,
+  .appeal-stage label {
     display: grid;
     gap: 8px;
     color: #42506a;
     font-weight: 900;
   }
 
-  .appeal-form textarea {
+  .appeal-form textarea,
+  .appeal-stage textarea {
     padding-right: 13px;
     resize: vertical;
+  }
+
+  .appeal-steps {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 18px;
+  }
+
+  .appeal-steps span {
+    display: grid;
+    place-items: center;
+    min-height: 34px;
+    border-radius: 8px;
+    background: #f2f5fb;
+    color: #7a88a5;
+    font-size: 12px;
+    font-weight: 900;
+  }
+
+  .appeal-steps span.active {
+    background: #5c7cfa;
+    color: white;
+  }
+
+  .appeal-steps span.done {
+    background: #e4f7ed;
+    color: #1a8a4a;
+  }
+
+  .appeal-negotiate {
+    padding: 16px;
+    border-radius: 8px;
+    border: 1px solid #d8dff5;
+    background: #f8faff;
+    color: #42506a;
+    line-height: 1.7;
+  }
+
+  .appeal-negotiate strong {
+    display: block;
+    margin-bottom: 6px;
+    color: #5c7cfa;
+  }
+
+  .appeal-negotiate p {
+    margin: 0;
+  }
+
+  .appeal-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 18px;
+  }
+
+  .appeal-stage {
+    display: grid;
+    gap: 16px;
+  }
+
+  .appeal-stage.done {
+    text-align: center;
+  }
+
+  .appeal-upload-placeholder {
+    display: grid;
+    place-items: center;
+    min-height: 88px;
+    border: 2px dashed #c8d2f0;
+    border-radius: 8px;
+    background: #fafbff;
+    color: #7a88a5;
+    font-weight: 800;
+    text-align: center;
+    padding: 14px;
+  }
+
+  .appeal-status {
+    margin: 0;
+    padding: 14px 16px;
+    border-radius: 8px;
+    background: #f0f3ff;
+    color: #4e60d8;
+    font-weight: 900;
+    line-height: 1.6;
+  }
+
+  .appeal-status.muted {
+    background: #f3f5f9;
+    color: #60708b;
+    font-size: 13px;
   }
 
   .appeal-preview {
