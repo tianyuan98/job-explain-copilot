@@ -8,25 +8,30 @@ from openai import AsyncOpenAI
 DEFAULT_BASE_URL = "https://open.bigmodel.cn/api/paas/v4/"
 DEFAULT_MODEL = "glm-4-flash"
 TIMEOUT_SECONDS = 30.0
-MAX_RETRIES = 2
+MAX_RETRIES = 1
 RETRY_DELAY_SECONDS = 1.0
-
 
 api_key = os.getenv("LLM_API_KEY")
 base_url = os.getenv("LLM_BASE_URL", DEFAULT_BASE_URL)
 model = os.getenv("LLM_MODEL", DEFAULT_MODEL)
 
-client = AsyncOpenAI(
-    api_key=api_key,
-    base_url=base_url,
-    timeout=TIMEOUT_SECONDS,
-)
+_has_api_key = bool(api_key)
+
+if _has_api_key:
+    client = AsyncOpenAI(
+        api_key=api_key,
+        base_url=base_url,
+        timeout=TIMEOUT_SECONDS,
+    )
+else:
+    client = None
 
 
 async def chat(messages: list[dict[str, Any]]) -> str:
-    """Send chat messages to the configured LLM and return assistant text."""
-    last_error: Exception | None = None
+    if not _has_api_key:
+        return "[Demo 模式] 未配置 LLM_API_KEY，返回模拟数据。"
 
+    last_error: Exception | None = None
     for attempt in range(MAX_RETRIES + 1):
         try:
             response = await client.chat.completions.create(
@@ -45,5 +50,4 @@ async def chat(messages: list[dict[str, Any]]) -> str:
 
 
 def chat_sync(messages: list[dict[str, Any]]) -> str:
-    """Synchronous wrapper for chat."""
     return asyncio.run(chat(messages))
