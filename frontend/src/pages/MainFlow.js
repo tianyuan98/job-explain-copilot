@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useState } from "react";
 import axios from "axios";
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
+const API_BASE_URL = "https://job-explain-copilot-production.up.railway.app";
 
 const steps = ["简历上传", "基本信息补充", "AI能力画像确认", "岗位推荐与解释"];
 
@@ -33,6 +33,11 @@ function MainFlow() {
   const [parseStage, setParseStage] = useState("");
   const [parseError, setParseError] = useState("");
   const [generatedPortrait, setGeneratedPortrait] = useState("");
+  const [portraitDimensions, setPortraitDimensions] = useState([]);
+  const [disputeMode, setDisputeMode] = useState(false);
+  const [disputedDimensions, setDisputedDimensions] = useState([]);
+  const [disputeMessage, setDisputeMessage] = useState("");
+  const [activeRadarTip, setActiveRadarTip] = useState(null);
   const [generatingPortrait, setGeneratingPortrait] = useState(false);
   const [generatedRecommendation, setGeneratedRecommendation] = useState(null);
   const [generatingRecommendation, setGeneratingRecommendation] = useState(false);
@@ -74,6 +79,10 @@ function MainFlow() {
       : null;
 
   const abilityCards = useMemo(() => parsePortrait(portrait), [portrait]);
+  const radarDimensions = useMemo(
+    () => normalizeRadarDimensions(detail?.dimensions || scenario?.dimensions || portraitDimensions, abilityCards),
+    [detail?.dimensions, scenario?.dimensions, portraitDimensions, abilityCards]
+  );
 
   async function handleStartMatching() {
     // 情况 A：示例数据模式 → 已有推荐数据，直接进入步骤4
@@ -119,6 +128,10 @@ function MainFlow() {
   async function handleGeneratePortrait() {
     // 情况 A：已有预置 portrait（来自一键导入示例数据）
     if (detail?.portrait || scenario?.portrait) {
+      setPortraitDimensions(detail?.dimensions || scenario?.dimensions || []);
+      setDisputeMode(false);
+      setDisputeMessage("");
+      setActiveRadarTip(null);
       setCurrentStep(3);
       return;
     }
@@ -137,6 +150,11 @@ function MainFlow() {
         career_interest: extractField("职业意向"),
       });
       setGeneratedPortrait(response.data.portrait || "");
+      setPortraitDimensions(response.data.dimensions || []);
+      setDisputeMode(false);
+      setDisputedDimensions([]);
+      setDisputeMessage("");
+      setActiveRadarTip(null);
       setCurrentStep(3);
     } catch (e) {
       setError("画像生成失败，请检查网络后重试");
@@ -159,6 +177,7 @@ function MainFlow() {
 
       const fullDetail = explainResponse.data;
       setDetail(fullDetail);
+      setPortraitDimensions(fullDetail.dimensions || fullDetail.scenario?.dimensions || []);
       setFormFields(buildFields(fullDetail));
       setAppealTarget(fullDetail.scenario.alternative_job || "");
       setAppealReason(fullDetail.scenario.appeal_reason || "");
@@ -255,6 +274,25 @@ function MainFlow() {
         editable: true,
       },
     ]);
+  }
+
+  function handleDisputeButton() {
+    if (disputeMode) {
+      setDisputeMode(false);
+      setDisputeMessage("已记录，我们将在后续优化中参考。");
+      return;
+    }
+    setDisputeMode(true);
+    setDisputeMessage("请选择你觉得不准确的能力项。");
+  }
+
+  function handleAbilityDispute(label) {
+    if (!disputeMode) return;
+    setDisputedDimensions((current) =>
+      current.includes(label)
+        ? current.filter((item) => item !== label)
+        : [...current, label]
+    );
   }
 
   function generateAppealReport(event) {
@@ -438,14 +476,39 @@ function MainFlow() {
             </div>
 
             <article className="portrait-card">
+              <AbilityRadar
+                activeIndex={activeRadarTip}
+                dimensions={radarDimensions}
+                onToggleTip={(index) => setActiveRadarTip(activeRadarTip === index ? null : index)}
+              />
+
               <div className="ability-grid">
                 {abilityCards.map((item) => (
-                  <div className="ability-item" key={item.label}>
+                  <button
+                    className={`ability-item ${disputeMode ? "disputable" : ""} ${
+                      disputedDimensions.includes(item.label) ? "disputed" : ""
+                    }`}
+                    disabled={!disputeMode}
+                    key={item.label}
+                    onClick={() => handleAbilityDispute(item.label)}
+                    type="button"
+                  >
                     <span className={`ability-badge ${item.tone}`}>{item.level}</span>
                     <strong>{item.label}</strong>
                     <p>{item.detail}</p>
-                  </div>
+                  </button>
                 ))}
+              </div>
+
+              <div className="portrait-feedback">
+                <button
+                  className={`dispute-btn ${disputeMode ? "active" : ""}`}
+                  onClick={handleDisputeButton}
+                  type="button"
+                >
+                  我觉得不准
+                </button>
+                {disputeMessage && <span>{disputeMessage}</span>}
               </div>
 
               <div className="portrait-text">{renderPortraitText(portrait)}</div>
@@ -743,6 +806,176 @@ function renderPortraitText(text) {
 
   return text.split("\n").map((line, index) =>
     line.trim() ? <p key={`${line}-${index}`}>{line}</p> : <br key={`br-${index}`} />
+  );
+}
+
+function normalizeRadarDimensions(dimensions, abilityCards) {
+  const source = Array.isArray(dimensions) && dimensions.length
+    ? dimensions
+    : abilityCards.map((item) => ({
+        name: item.label,
+        level: item.level,
+        confidence: "低",
+        evidence: item.detail || "来自能力画像文本解析",
+      }));
+
+  const normalized = source
+    .filter((item) => item && (item.name || item.label))
+    .slice(0, 5)
+    .map((item) => ({
+      name: String(item.name || item.label).trim(),
+      level: normalizeRadarLevel(item.level),
+      confidence: normalizeConfidence(item.confidence),
+      evidence: String(item.evidence || item.detail || "暂无补充依据").trim(),
+    }));
+
+  if (normalized.length >= 3) return normalized;
+
+  return [
+    { name: "专业基础", level: "待补充", confidence: "低", evidence: "等待资料补充" },
+    { name: "实践能力", level: "待补充", confidence: "低", evidence: "等待资料补充" },
+    { name: "学习背景", level: "待补充", confidence: "低", evidence: "等待资料补充" },
+    { name: "沟通协作", level: "待补充", confidence: "低", evidence: "等待资料补充" },
+  ];
+}
+
+function normalizeRadarLevel(level) {
+  const value = String(level || "").trim();
+  if (value === "较强") return "较强";
+  if (value === "一般" || value === "中等" || value === "待确认" || value === "已识别") return "一般";
+  if (value.includes("强")) return "较强";
+  if (value.includes("待") || value.includes("弱") || value.includes("不足")) return "待补充";
+  return "待补充";
+}
+
+function normalizeConfidence(confidence) {
+  const value = String(confidence || "").trim();
+  if (value === "高" || value === "中" || value === "低") return value;
+  if (value.includes("高")) return "高";
+  if (value.includes("中")) return "中";
+  return "低";
+}
+
+function levelScore(level) {
+  if (level === "较强") return 3;
+  if (level === "一般" || level === "中等") return 2;
+  return 1;
+}
+
+function radarPoint(index, total, radius, center) {
+  const angle = -Math.PI / 2 + (index * 2 * Math.PI) / total;
+  return {
+    x: center + Math.cos(angle) * radius,
+    y: center + Math.sin(angle) * radius,
+  };
+}
+
+function pointList(points) {
+  return points.map((point) => `${point.x},${point.y}`).join(" ");
+}
+
+function AbilityRadar({ dimensions, activeIndex, onToggleTip }) {
+  const size = 330;
+  const center = size / 2;
+  const maxRadius = 98;
+  const items = normalizeRadarDimensions(dimensions, []).slice(0, 5);
+  const total = items.length;
+  const rings = [1, 2, 3];
+  const axisPoints = items.map((_, index) => radarPoint(index, total, maxRadius, center));
+  const valuePoints = items.map((item, index) =>
+    radarPoint(index, total, (maxRadius * levelScore(item.level)) / 3, center)
+  );
+  const activeItem = activeIndex !== null ? items[activeIndex] : null;
+
+  return (
+    <section className="radar-panel" aria-label="能力雷达图">
+      <div className="radar-copy">
+        <p className="eyebrow">能力概览</p>
+        <h2>维度雷达图</h2>
+        <div className="radar-legend">
+          <span><i className="legend-low" />待补充</span>
+          <span><i className="legend-mid" />一般</span>
+          <span><i className="legend-high" />较强</span>
+        </div>
+      </div>
+
+      <div className="radar-stage">
+        <svg className="radar-svg" viewBox={`0 0 ${size} ${size}`} role="img" aria-label="能力维度雷达图">
+          {rings.map((ring) => {
+            const radius = (maxRadius * ring) / 3;
+            const points = items.map((_, index) => radarPoint(index, total, radius, center));
+            return (
+              <polygon
+                className="radar-ring"
+                key={ring}
+                points={pointList(points)}
+              />
+            );
+          })}
+
+          {axisPoints.map((point, index) => (
+            <line
+              className="radar-axis"
+              key={`axis-${items[index].name}`}
+              x1={center}
+              x2={point.x}
+              y1={center}
+              y2={point.y}
+            />
+          ))}
+
+          <polygon className="radar-value" points={pointList(valuePoints)} />
+
+          {items.map((item, index) => {
+            const point = valuePoints[index];
+            const labelPoint = radarPoint(index, total, maxRadius + 38, center);
+            const anchor = labelPoint.x < center - 12 ? "end" : labelPoint.x > center + 12 ? "start" : "middle";
+            return (
+              <g key={item.name}>
+                <circle
+                  className="radar-hit"
+                  onClick={() => onToggleTip(index)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") onToggleTip(index);
+                  }}
+                  cx={point.x}
+                  cy={point.y}
+                  r="14"
+                  role="button"
+                  tabIndex="0"
+                  aria-label={`查看${item.name}依据`}
+                />
+                <circle className="radar-dot" cx={point.x} cy={point.y} r="5" />
+                <text className="radar-label" textAnchor={anchor} x={labelPoint.x} y={labelPoint.y - 4}>
+                  {item.name}
+                </text>
+                <text className="radar-level" textAnchor={anchor} x={labelPoint.x} y={labelPoint.y + 14}>
+                  {item.level}
+                </text>
+                <foreignObject x={labelPoint.x - 13} y={labelPoint.y + 18} width="26" height="26">
+                  <button
+                    className="radar-info"
+                    onClick={() => onToggleTip(index)}
+                    type="button"
+                    aria-label={`查看${item.name}置信度`}
+                  >
+                    ℹ️
+                  </button>
+                </foreignObject>
+              </g>
+            );
+          })}
+        </svg>
+
+        {activeItem && (
+          <div className="radar-tooltip">
+            <strong>{activeItem.name}</strong>
+            <span>置信度：{activeItem.confidence}</span>
+            <p>{activeItem.evidence}</p>
+          </div>
+        )}
+      </div>
+    </section>
   );
 }
 
@@ -1096,6 +1329,149 @@ const styles = `
     background: #fafbff;
   }
 
+  .radar-panel {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: 18px;
+    align-items: center;
+    margin-bottom: 22px;
+    padding: 18px;
+    border: 1px solid #eef1fc;
+    border-radius: 8px;
+    background: white;
+  }
+
+  .radar-copy h2 {
+    margin: 0 0 12px;
+    font-size: 20px;
+    color: #26324a;
+  }
+
+  .radar-legend {
+    display: grid;
+    gap: 8px;
+    color: #60708b;
+    font-size: 13px;
+    font-weight: 800;
+  }
+
+  .radar-legend span {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .radar-legend i {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+  }
+
+  .legend-low { background: #ffc078; }
+  .legend-mid { background: #748ffc; }
+  .legend-high { background: #38d9a9; }
+
+  .radar-stage {
+    position: relative;
+    min-height: 330px;
+    display: grid;
+    place-items: center;
+  }
+
+  .radar-svg {
+    width: min(100%, 430px);
+    max-height: 360px;
+    overflow: visible;
+  }
+
+  .radar-ring {
+    fill: none;
+    stroke: #dfe5fb;
+    stroke-width: 1;
+  }
+
+  .radar-axis {
+    stroke: #edf0f9;
+    stroke-width: 1;
+  }
+
+  .radar-value {
+    fill: rgba(92, 124, 250, 0.2);
+    stroke: #5c7cfa;
+    stroke-width: 2;
+  }
+
+  .radar-dot {
+    fill: #5c7cfa;
+    stroke: white;
+    stroke-width: 2;
+    pointer-events: none;
+  }
+
+  .radar-hit {
+    fill: transparent;
+    cursor: pointer;
+    outline: none;
+  }
+
+  .radar-label {
+    fill: #26324a;
+    font-size: 12px;
+    font-weight: 900;
+  }
+
+  .radar-level {
+    fill: #60708b;
+    font-size: 11px;
+    font-weight: 800;
+  }
+
+  .radar-info {
+    width: 24px;
+    height: 24px;
+    border: 0;
+    border-radius: 50%;
+    background: #f0f3ff;
+    cursor: pointer;
+    font-size: 13px;
+    line-height: 24px;
+  }
+
+  .radar-tooltip {
+    position: absolute;
+    right: 4px;
+    bottom: 4px;
+    width: min(260px, 92%);
+    padding: 12px 14px;
+    border-radius: 8px;
+    border: 1px solid #d8dff5;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 16px 34px rgba(82, 103, 161, 0.18);
+    color: #42506a;
+  }
+
+  .radar-tooltip strong,
+  .radar-tooltip span {
+    display: block;
+  }
+
+  .radar-tooltip strong {
+    margin-bottom: 4px;
+    color: #26324a;
+  }
+
+  .radar-tooltip span {
+    color: #5c7cfa;
+    font-size: 13px;
+    font-weight: 900;
+  }
+
+  .radar-tooltip p {
+    margin: 6px 0 0;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
   .ability-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1109,6 +1485,29 @@ const styles = `
     border-radius: 8px;
     background: white;
     border: 1px solid #eef1fc;
+    color: inherit;
+    font: inherit;
+    cursor: default;
+    transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+  }
+
+  .ability-item:disabled {
+    opacity: 1;
+  }
+
+  .ability-item.disputable {
+    cursor: pointer;
+  }
+
+  .ability-item.disputable:hover,
+  .ability-item.disputed {
+    border-color: #5c7cfa;
+    box-shadow: 0 10px 24px rgba(92, 124, 250, 0.14);
+    transform: translateY(-1px);
+  }
+
+  .ability-item.disputed {
+    background: #f0f3ff;
   }
 
   .ability-badge {
@@ -1136,6 +1535,39 @@ const styles = `
     font-size: 13px;
     color: #60708b;
     line-height: 1.5;
+  }
+
+  .portrait-feedback {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin: -4px 0 18px;
+  }
+
+  .dispute-btn {
+    border: 1px solid #d8dff5;
+    border-radius: 8px;
+    background: white;
+    color: #5c7cfa;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 900;
+    padding: 10px 14px;
+    transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
+  }
+
+  .dispute-btn.active,
+  .dispute-btn:hover {
+    background: #5c7cfa;
+    border-color: #5c7cfa;
+    color: white;
+  }
+
+  .portrait-feedback span {
+    color: #60708b;
+    font-size: 13px;
+    font-weight: 700;
   }
 
   .portrait-text {
@@ -1378,8 +1810,19 @@ const styles = `
     }
 
     .field-row,
-    .match-top {
+    .match-top,
+    .radar-panel {
       grid-template-columns: 1fr;
+    }
+
+    .radar-copy {
+      text-align: center;
+    }
+
+    .radar-legend {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
     }
   }
 
