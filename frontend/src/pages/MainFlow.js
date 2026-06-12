@@ -76,8 +76,14 @@ function MainFlow() {
     if (file) {
       setResumeFileName(file.name);
       setResumeUploaded(true);
+
+      // 模拟简历解析：如果有已加载的 demo 数据，用 archive 预填表单；否则用默认示例
+      if (detail?.archive && detail.archive.length > 0) {
+        setFormFields(buildFields(detail));
+      } else {
+        setFormFields(defaultResumeFields(file.name));
+      }
     }
-    // 重置 input 以便同一文件可重复选择
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -440,6 +446,18 @@ function MainFlow() {
       )}
     </main>
   );
+}
+
+function defaultResumeFields(fileName) {
+  const inferredName = fileName ? fileName.replace(/[._].*/, "") : "示例学生";
+  return [
+    { key: "name", label: "姓名", value: inferredName, source: "来自简历", editable: true },
+    { key: "school", label: "学校", value: "腾讯校园招聘候选人", source: "学生填写", editable: true },
+    { key: "major", label: "专业", value: "", source: "学生填写", editable: true },
+    { key: "degree", label: "学历", value: "", source: "学生填写", editable: true },
+    { key: "project", label: "项目经历", value: "", source: "来自简历", editable: true },
+    { key: "extra", label: "补充信息", value: "", source: "学生补充", editable: true },
+  ];
 }
 
 function toEmptyField(field) {
