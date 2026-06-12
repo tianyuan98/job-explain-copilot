@@ -64,7 +64,7 @@ function MainFlow() {
         alternative_job: scenario.alternative_job,
         alt_match_score: scenario.alt_match_score,
         alt_gaps: scenario.alt_gaps || [],
-        alt_suggestions: [],
+        alt_suggestions: scenario.alt_suggestions || [],
         explanation: detail?.explanation || "",
         advice: detail?.advice || "",
         name: scenario.name,
@@ -647,19 +647,15 @@ function MainFlow() {
               )}
 
               <div className="dimension-details">
-                {radarDimensions.length > 0 ? (
-                  radarDimensions.map((dim) => (
-                    <div className="dimension-card" key={dim.name}>
-                      <div className="dim-card-header">
-                        <strong>{dim.name}</strong>
-                        <span className="dim-confidence">置信度 {dim.confidence}</span>
-                      </div>
-                      <p>{dim.evidence}</p>
+                {abilityCards.map((item) => (
+                  <div className="dimension-card" key={item.label}>
+                    <div className="dim-card-header">
+                      <strong>{item.label}</strong>
+                      <span className={`ability-badge ${item.tone}`}>{item.level}</span>
                     </div>
-                  ))
-                ) : (
-                  <div className="portrait-text">{renderPortraitText(portrait)}</div>
-                )}
+                    <p>{item.detail}</p>
+                  </div>
+                ))}
               </div>
             </article>
 
@@ -760,24 +756,36 @@ function MainFlow() {
             <span>匹配度 {recommendation.alt_match_score}</span>
             <span>当前推荐 {recommendation.match_score}</span>
           </div>
+
+          {Number.isFinite(Number(recommendation.alt_match_score)) && recommendation.alt_gaps?.length > 0 && (
+            <div className="growth-progress">
+              <div className="growth-progress-top">
+                <strong>岗位匹配提升进度</strong>
+                <span>{recommendation.alt_match_score}/100</span>
+              </div>
+              <div className="growth-progress-track" aria-label="岗位匹配提升进度">
+                <div
+                  className="growth-progress-fill"
+                  style={{ width: `${Math.min(100, Math.max(0, Number(recommendation.alt_match_score)))}%` }}
+                />
+              </div>
+              <p>每完成一项补给，预计可提升 {getGrowthStepScore(recommendation)} 分</p>
+            </div>
+          )}
+
           <div className="modal-block">
-            <h4>差距列表</h4>
-            <ul className="gap-list">
-              {recommendation.alt_gaps.map((gap) => (
-                <li key={gap}>❌ {gap}</li>
-              ))}
-            </ul>
-          </div>
-          <div className="modal-block">
-            <h4>建议</h4>
-            {recommendation.alt_suggestions && recommendation.alt_suggestions.length > 0 ? (
-              <ul className="gap-list">
-                {recommendation.alt_suggestions.map((s) => (
-                  <li key={s}>💡 {s}</li>
+            <h4>成长向导</h4>
+            {recommendation.alt_gaps?.length > 0 ? (
+              <div className="growth-guide-list">
+                {buildGrowthItems(recommendation).map((item) => (
+                  <div className="growth-guide-item" key={item.gap}>
+                    <p>❌ {item.gap}</p>
+                    <span className="growth-supply-tag">💡 {item.suggestion}</span>
+                  </div>
                 ))}
-              </ul>
+              </div>
             ) : (
-              <p className="pre-line">{recommendation.advice}</p>
+              <p className="pre-line">暂未识别到明确差距，建议补充更多项目、课程或作品集信息后再评估。</p>
             )}
           </div>
           <button className="primary-btn wide" type="button">
@@ -1032,6 +1040,44 @@ function buildPortraitDisputeText(dimensions, reason, detail) {
     `异议原因：${reason || "未填写"}`,
     `补充说明：${detail?.trim() || "用户未补充具体说明"}`,
   ].join("\n");
+}
+
+function getGrowthSuggestions(recommendation) {
+  if (recommendation?.alt_suggestions?.length) {
+    return recommendation.alt_suggestions;
+  }
+
+  const advice = recommendation?.advice || "";
+  const sections = advice
+    .split(/\n(?=\d+\.\s*\*\*|\d+\.\s)/)
+    .map((item) => item.replace(/^\d+\.\s*/, "").replace(/\*\*/g, "").trim())
+    .filter(Boolean);
+
+  if (sections.length) {
+    return sections;
+  }
+
+  return [
+    "建议补充一个可展示的项目案例",
+    "建议补充相关课程、竞赛或证书材料",
+    "建议整理作品集或经历说明，便于人工复核",
+  ];
+}
+
+function buildGrowthItems(recommendation) {
+  const gaps = recommendation?.alt_gaps || [];
+  const suggestions = getGrowthSuggestions(recommendation);
+  return gaps.map((gap, index) => ({
+    gap,
+    suggestion: suggestions[index] || suggestions[index % suggestions.length] || "建议补充更多证明材料",
+  }));
+}
+
+function getGrowthStepScore(recommendation) {
+  const score = Number(recommendation?.alt_match_score);
+  const gapCount = recommendation?.alt_gaps?.length || 0;
+  if (!Number.isFinite(score) || gapCount === 0) return "";
+  return Math.max(1, Math.round((100 - score) / gapCount));
 }
 
 function normalizeRadarDimensions(dimensions, abilityCards) {
@@ -1920,7 +1966,7 @@ const styles = `
 
   .dimension-details {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 14px;
     margin-top: 18px;
   }
@@ -2119,6 +2165,49 @@ const styles = `
     font-weight: 900;
   }
 
+  .growth-progress {
+    margin: 8px 0 18px;
+    padding: 16px;
+    border: 1px solid #e0e4ff;
+    border-radius: 8px;
+    background: #fafbff;
+  }
+
+  .growth-progress-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 10px;
+    color: #26324a;
+    font-weight: 900;
+  }
+
+  .growth-progress-top span {
+    color: #5c7cfa;
+  }
+
+  .growth-progress-track {
+    height: 12px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #e7ebfa;
+  }
+
+  .growth-progress-fill {
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(135deg, #5c7cfa, #9b6dff);
+    box-shadow: 0 8px 18px rgba(92, 124, 250, 0.26);
+  }
+
+  .growth-progress p {
+    margin: 10px 0 0;
+    color: #60708b;
+    font-size: 13px;
+    font-weight: 800;
+  }
+
   .modal-block {
     padding: 18px 0;
     border-top: 1px solid #e7ebfa;
@@ -2137,6 +2226,38 @@ const styles = `
     list-style: none;
     color: #42506a;
     line-height: 1.7;
+  }
+
+  .growth-guide-list {
+    display: grid;
+    gap: 12px;
+  }
+
+  .growth-guide-item {
+    padding: 14px;
+    border: 1px solid #edf0f9;
+    border-radius: 8px;
+    background: #fafbff;
+  }
+
+  .growth-guide-item p {
+    margin: 0 0 10px;
+    color: #42506a;
+    font-weight: 800;
+    line-height: 1.6;
+  }
+
+  .growth-supply-tag {
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+    padding: 7px 10px;
+    border-radius: 999px;
+    background: #f0f3ff;
+    color: #5360c9;
+    font-size: 13px;
+    font-weight: 900;
+    line-height: 1.5;
   }
 
   .pre-line {
