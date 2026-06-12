@@ -32,15 +32,52 @@ function MainFlow() {
   const [parsing, setParsing] = useState(false);
   const [parseStage, setParseStage] = useState("");
   const [parseError, setParseError] = useState("");
+  const [generatedPortrait, setGeneratedPortrait] = useState("");
+  const [generatingPortrait, setGeneratingPortrait] = useState(false);
 
   const fileInputRef = useRef(null);
 
   const scenario = detail?.scenario;
   const archive = detail?.archive || scenario?.archive || [];
-  const portrait = detail?.portrait || scenario?.portrait || "";
+  const portrait = detail?.portrait || scenario?.portrait || generatedPortrait || "";
   const matchScore = scenario?.match_score || 0;
 
   const abilityCards = useMemo(() => parsePortrait(portrait), [portrait]);
+
+  // 从表单字段中提取所需参数
+  function extractField(label) {
+    const found = formFields.find((f) => f.label === label);
+    return found?.value || "";
+  }
+
+  async function handleGeneratePortrait() {
+    // 情况 A：已有预置 portrait（来自一键导入示例数据）
+    if (detail?.portrait || scenario?.portrait) {
+      setCurrentStep(3);
+      return;
+    }
+
+    // 情况 B：手动填写模式 → 调用 API 生成
+    setGeneratingPortrait(true);
+    try {
+      const response = await axios.post(`${API_BASE_URL}/api/generate_portrait`, {
+        school: extractField("学校"),
+        major: extractField("专业"),
+        degree: extractField("学历"),
+        algorithm_rank: extractField("算法笔试排名"),
+        internship: extractField("实习经历"),
+        projects: extractField("项目经历"),
+        certificates: extractField("证书/补充") || extractField("补充信息"),
+        career_interest: extractField("职业意向"),
+      });
+      setGeneratedPortrait(response.data.portrait || "");
+      setCurrentStep(3);
+    } catch (e) {
+      setError("画像生成失败，请检查网络后重试");
+    } finally {
+      setGeneratingPortrait(false);
+    }
+  }
 
   async function loadExampleData() {
     try {
@@ -316,10 +353,11 @@ function MainFlow() {
               </button>
               <button
                 className="primary-btn"
-                onClick={() => setCurrentStep(3)}
+                onClick={handleGeneratePortrait}
                 type="button"
+                disabled={generatingPortrait}
               >
-                确认并生成能力画像 →
+                {generatingPortrait ? "生成中…" : "确认并生成能力画像 →"}
               </button>
             </div>
           </section>
