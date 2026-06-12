@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import axios from "axios";
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
@@ -28,6 +28,9 @@ function MainFlow() {
   const [appealTarget, setAppealTarget] = useState("");
   const [appealReason, setAppealReason] = useState("");
   const [appealReport, setAppealReport] = useState("");
+  const [resumeFileName, setResumeFileName] = useState("");
+
+  const fileInputRef = useRef(null);
 
   const scenario = detail?.scenario;
   const archive = detail?.archive || scenario?.archive || [];
@@ -65,7 +68,19 @@ function MainFlow() {
   }
 
   function handleUploadClick() {
-    setResumeUploaded(true);
+    fileInputRef.current?.click();
+  }
+
+  function handleFileChange(event) {
+    const file = event.target.files?.[0];
+    if (file) {
+      setResumeFileName(file.name);
+      setResumeUploaded(true);
+    }
+    // 重置 input 以便同一文件可重复选择
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   }
 
   function updateField(index, value) {
@@ -157,14 +172,22 @@ function MainFlow() {
               <p>先让 AI 解释官读取基础资料，也可以跳过后手动补充。</p>
             </div>
 
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,.docx"
+              style={{ display: "none" }}
+              onChange={handleFileChange}
+            />
+
             <button
               className={`upload-zone ${resumeUploaded ? "uploaded" : ""}`}
               onClick={handleUploadClick}
               type="button"
             >
-              {resumeUploaded && scenario ? (
+              {resumeUploaded ? (
                 <>
-                  <strong>{scenario.name}_简历.pdf ✓</strong>
+                  <strong>{resumeFileName || (scenario ? `${scenario.name}_简历.pdf ✓` : "简历.pdf ✓")}</strong>
                   <span>已解析出关键字段</span>
                 </>
               ) : (
