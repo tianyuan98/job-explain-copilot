@@ -17,17 +17,14 @@ function HomePage() {
   return (
     <main className="home-page">
       <section className="home-hero">
-        <p className="home-eyebrow">Tencent Campus Hiring AI Demo</p>
-        <h1>AI 定岗解释与复审演示</h1>
-        <p>
-          用三个校园招聘场景快速体验岗位推荐解释、换岗成长建议和申诉报告生成。
-        </p>
+        <h1>AI 定岗解释官</h1>
+        <p>让推荐有依据，让选择被尊重</p>
         <button
           className="import-button"
           onClick={() => navigate("/demo")}
           type="button"
         >
-          🎯 一键导入示例数据
+          ✨ 开启我的能力画像与岗位推荐
         </button>
       </section>
     </main>
