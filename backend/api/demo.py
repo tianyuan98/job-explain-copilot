@@ -623,11 +623,13 @@ class RecommendRequest(BaseModel):
     certificates: str = ""
     career_interest: str = ""
     portrait: str = ""
+    portrait_dispute: str = ""
 
 
 RECOMMEND_SYSTEM_PROMPT = (
     "你是一个校园招聘 AI 定岗推荐助手。请根据学生的基本信息、能力画像，"
     "推荐一个最适合的岗位，并给出匹配度、三条推荐原因。"
+    "如果用户提供了画像异议，请将其作为补充信号参考；不要直接推翻原画像，但需要在推荐理由、差距或建议中体现需要复核的点。"
     "同时提供一个备选岗位、当前匹配度、差距和弥补建议。"
     "仅返回纯JSON对象（不要```json标记，不要任何解释文字），字段名严格使用英文："
     "recommended_job(推荐岗位名称，中文), match_score(0-100整数), "
@@ -667,6 +669,11 @@ async def generate_recommendation(request: RecommendRequest) -> dict[str, Any]:
         "",
         f"【能力画像】\n{request.portrait or '暂无画像'}",
     ])
+    if request.portrait_dispute:
+        user_lines.extend([
+            "",
+            f"【学生对能力画像的异议】\n{request.portrait_dispute}",
+        ])
     user_content = "\n".join(user_lines)
 
     messages = [
