@@ -527,7 +527,12 @@ RECOMMEND_SYSTEM_PROMPT = (
     "你是一个校园招聘 AI 定岗推荐助手。请根据学生的基本信息、能力画像，"
     "推荐一个最适合的岗位，并给出匹配度、三条推荐原因。"
     "同时提供一个备选岗位、当前匹配度、差距和弥补建议。"
-    "仅返回JSON格式，不含其他文字。"
+    "仅返回纯JSON对象（不要```json标记，不要任何解释文字），字段名严格使用英文："
+    "recommended_job(推荐岗位名称，中文), match_score(0-100整数), "
+    "key_reasons(3条原因的中文数组), alternative_job(备选岗位，中文), "
+    "alt_match_score(备选匹配分，0-100整数), alt_gaps(差距的中文数组), "
+    "alt_suggestions(弥补建议的中文数组)。"
+    "所有7个字段都必须有值，不允许省略。"
 )
 
 RECOMMEND_FALLBACK: dict[str, Any] = {
@@ -573,12 +578,13 @@ async def generate_recommendation(request: RecommendRequest) -> dict[str, Any]:
         print(f"[recommend] LLM 调用失败: {exc}", flush=True)
         return {"error": "llm_failed", "message": "岗位推荐生成失败，请重试", **RECOMMEND_FALLBACK}
 
-    # 清洗 JSON
+    # 清洗 JSON：处理 ```json / ``` 包裹
     cleaned = llm_response.strip()
+    # Remove ```json or ``` markers
     if cleaned.startswith("```"):
-        lines = cleaned.split("\n")
-        lines = [l for l in lines if not l.strip().startswith("```")]
-        cleaned = "\n".join(lines).strip()
+        cleaned = re.sub(r'^```(?:json)?\s*\n?', '', cleaned)
+        cleaned = re.sub(r'\n?```\s*$', '', cleaned)
+        cleaned = cleaned.strip()
 
     try:
         result = _json.loads(cleaned)
