@@ -29,6 +29,9 @@ function MainFlow() {
   const [appealReason, setAppealReason] = useState("");
   const [appealReport, setAppealReport] = useState("");
   const [resumeFileName, setResumeFileName] = useState("");
+  const [parsing, setParsing] = useState(false);
+  const [parseStage, setParseStage] = useState("");
+  const [parseError, setParseError] = useState("");
 
   const fileInputRef = useRef(null);
 
@@ -73,17 +76,51 @@ function MainFlow() {
 
   function handleFileChange(event) {
     const file = event.target.files?.[0];
-    if (file) {
-      setResumeFileName(file.name);
-      setResumeUploaded(true);
+    if (!file) return;
 
-      // 模拟简历解析：如果有已加载的 demo 数据，用 archive 预填表单；否则用默认示例
-      if (detail?.archive && detail.archive.length > 0) {
-        setFormFields(buildFields(detail));
-      } else {
-        setFormFields(defaultResumeFields(file.name));
+    setResumeFileName(file.name);
+    setParseError("");
+    setParsing(true);
+
+    // 进度动画阶段
+    const stages = [
+      "正在提取简历内容…",
+      "正在识别教育背景…",
+      "正在分析技能标签…",
+    ];
+    let stageIndex = 0;
+    setParseStage(stages[0]);
+    const stageTimer = setInterval(() => {
+      stageIndex++;
+      if (stageIndex < stages.length) {
+        setParseStage(stages[stageIndex]);
       }
-    }
+    }, 1200);
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    axios
+      .post(`${API_BASE_URL}/api/demo/parse_resume`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      })
+      .then((response) => {
+        clearInterval(stageTimer);
+        setParseStage("");
+        setParsing(false);
+        setResumeUploaded(true);
+        setFormFields(parsedToFields(response.data));
+      })
+      .catch(() => {
+        clearInterval(stageTimer);
+        setParseStage("");
+        setParsing(false);
+        setResumeUploaded(true);
+        setParseError("简历解析失败，请手动填写基本信息");
+        // 兜底：用文件名推断
+        setFormFields(defaultResumeFields(file.name));
+      });
+
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -187,11 +224,17 @@ function MainFlow() {
             />
 
             <button
-              className={`upload-zone ${resumeUploaded ? "uploaded" : ""}`}
+              className={`upload-zone ${resumeUploaded ? "uploaded" : ""} ${parsing ? "parsing" : ""}`}
               onClick={handleUploadClick}
               type="button"
+              disabled={parsing}
             >
-              {resumeUploaded ? (
+              {parsing ? (
+                <>
+                  <strong>{resumeFileName}</strong>
+                  <span className="parse-progress">{parseStage}</span>
+                </>
+              ) : resumeUploaded ? (
                 <>
                   <strong>{resumeFileName || (scenario ? `${scenario.name}_简历.pdf ✓` : "简历.pdf ✓")}</strong>
                   <span>已解析出关键字段</span>
@@ -199,10 +242,12 @@ function MainFlow() {
               ) : (
                 <>
                   <strong>点击或拖拽文件到这里</strong>
-                  <span>支持 PDF、Word</span>
+                  <span>支持 PDF（解析后自动填充表单）</span>
                 </>
               )}
             </button>
+
+            {parseError && <div className="soft-alert">{parseError}</div>}
 
             <div className="footer-actions">
               <button
@@ -457,6 +502,17 @@ function defaultResumeFields(fileName) {
     { key: "degree", label: "学历", value: "", source: "学生填写", editable: true },
     { key: "project", label: "项目经历", value: "", source: "来自简历", editable: true },
     { key: "extra", label: "补充信息", value: "", source: "学生补充", editable: true },
+  ];
+}
+
+function parsedToFields(parsed) {
+  return [
+    { key: "name", label: "姓名", value: parsed.name || "", source: "来自简历", editable: true },
+    { key: "school", label: "学校", value: parsed.school || "", source: "来自简历", editable: true },
+    { key: "major", label: "专业", value: parsed.major || "", source: "来自简历", editable: true },
+    { key: "degree", label: "学历", value: parsed.degree || "", source: "来自简历", editable: true },
+    { key: "project", label: "项目经历", value: parsed.projects || "", source: "来自简历", editable: true },
+    { key: "extra", label: "补充信息", value: parsed.certificates || "", source: "来自简历", editable: true },
   ];
 }
 
@@ -799,6 +855,30 @@ const styles = `
   .upload-zone.uploaded {
     border-color: #5c7cfa;
     background: #f0f3ff;
+  }
+
+  .upload-zone.parsing {
+    border-color: #f0a030;
+    background: #fff8ee;
+    cursor: default;
+    animation: pulse-border 1.2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-border {
+    0%, 100% { border-color: #f0a030; }
+    50% { border-color: #ffc870; }
+  }
+
+  .parse-progress {
+    color: #b06a0a;
+    font-size: 14px;
+    font-weight: 600;
+    animation: fade-in 0.3s ease;
+  }
+
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 
   .upload-zone strong {
