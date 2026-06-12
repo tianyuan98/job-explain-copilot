@@ -36,6 +36,8 @@ function MainFlow() {
   const [portraitDimensions, setPortraitDimensions] = useState([]);
   const [disputeMode, setDisputeMode] = useState(false);
   const [disputedDimensions, setDisputedDimensions] = useState([]);
+  const [disputeReason, setDisputeReason] = useState("这个评价偏低了");
+  const [disputeDetail, setDisputeDetail] = useState("");
   const [disputeMessage, setDisputeMessage] = useState("");
   const [activeRadarTip, setActiveRadarTip] = useState(null);
   const [generatingPortrait, setGeneratingPortrait] = useState(false);
@@ -105,6 +107,7 @@ function MainFlow() {
         certificates: extractField("证书/补充") || extractField("补充信息"),
         career_interest: extractField("职业意向"),
         portrait: portrait,
+        portrait_dispute: buildPortraitDisputeText(disputedDimensions, disputeReason, disputeDetail),
       };
       const response = await axios.post(`${API_BASE_URL}/api/demo/generate_recommendation`, payload);
       if (response.data?.error) {
@@ -278,6 +281,10 @@ function MainFlow() {
 
   function handleDisputeButton() {
     if (disputeMode) {
+      if (disputedDimensions.length === 0) {
+        setDisputeMessage("请先选择至少一个不准确的能力项。");
+        return;
+      }
       setDisputeMode(false);
       setDisputeMessage("已记录，我们将在后续优化中参考。");
       return;
@@ -293,6 +300,13 @@ function MainFlow() {
         ? current.filter((item) => item !== label)
         : [...current, label]
     );
+  }
+
+  function clearPortraitDispute() {
+    setDisputedDimensions([]);
+    setDisputeReason("这个评价偏低了");
+    setDisputeDetail("");
+    setDisputeMessage("");
   }
 
   function generateAppealReport(event) {
@@ -506,10 +520,52 @@ function MainFlow() {
                   onClick={handleDisputeButton}
                   type="button"
                 >
-                  我觉得不准
+                  {disputeMode ? "完成标记" : "我觉得不准"}
                 </button>
+                {disputedDimensions.length > 0 && !disputeMode && (
+                  <button className="dispute-clear" onClick={clearPortraitDispute} type="button">
+                    清空异议
+                  </button>
+                )}
                 {disputeMessage && <span>{disputeMessage}</span>}
               </div>
+
+              {(disputeMode || disputedDimensions.length > 0) && (
+                <div className="dispute-panel">
+                  <div className="dispute-summary">
+                    <strong>已选择</strong>
+                    <span>
+                      {disputedDimensions.length > 0 ? disputedDimensions.join("、") : "请点击上方能力卡片"}
+                    </span>
+                  </div>
+                  <label>
+                    异议原因
+                    <select
+                      onChange={(event) => setDisputeReason(event.target.value)}
+                      value={disputeReason}
+                    >
+                      <option value="这个评价偏低了">这个评价偏低了</option>
+                      <option value="这个维度不相关">这个维度不相关</option>
+                      <option value="我有补充项目/证书/经历">我有补充项目/证书/经历</option>
+                      <option value="依据不完整">依据不完整</option>
+                    </select>
+                  </label>
+                  <label>
+                    补充说明
+                    <textarea
+                      onChange={(event) => setDisputeDetail(event.target.value)}
+                      placeholder="可以补充项目、证书、作品集或你认为画像不准确的原因"
+                      rows="3"
+                      value={disputeDetail}
+                    />
+                  </label>
+                  {disputedDimensions.length > 0 && !disputeMode && (
+                    <p className="dispute-note">
+                      进入岗位匹配时，这条异议会作为补充信号传给推荐模型，并建议后续复核。
+                    </p>
+                  )}
+                </div>
+              )}
 
               <div className="portrait-text">{renderPortraitText(portrait)}</div>
             </article>
@@ -807,6 +863,15 @@ function renderPortraitText(text) {
   return text.split("\n").map((line, index) =>
     line.trim() ? <p key={`${line}-${index}`}>{line}</p> : <br key={`br-${index}`} />
   );
+}
+
+function buildPortraitDisputeText(dimensions, reason, detail) {
+  if (!Array.isArray(dimensions) || dimensions.length === 0) return "";
+  return [
+    `异议维度：${dimensions.join("、")}`,
+    `异议原因：${reason || "未填写"}`,
+    `补充说明：${detail?.trim() || "用户未补充具体说明"}`,
+  ].join("\n");
 }
 
 function normalizeRadarDimensions(dimensions, abilityCards) {
@@ -1564,10 +1629,84 @@ const styles = `
     color: white;
   }
 
+  .dispute-clear {
+    border: 0;
+    background: transparent;
+    color: #8c97b5;
+    cursor: pointer;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 800;
+  }
+
   .portrait-feedback span {
     color: #60708b;
     font-size: 13px;
     font-weight: 700;
+  }
+
+  .dispute-panel {
+    display: grid;
+    gap: 12px;
+    margin: -6px 0 18px;
+    padding: 16px;
+    border: 1px solid #dfe5fb;
+    border-radius: 8px;
+    background: white;
+  }
+
+  .dispute-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    color: #42506a;
+    font-size: 14px;
+  }
+
+  .dispute-summary strong {
+    color: #5c7cfa;
+  }
+
+  .dispute-panel label {
+    display: grid;
+    gap: 7px;
+    color: #42506a;
+    font-size: 14px;
+    font-weight: 900;
+  }
+
+  .dispute-panel select,
+  .dispute-panel textarea {
+    width: 100%;
+    border: 1px solid #d8dff5;
+    border-radius: 8px;
+    color: #26324a;
+    font: inherit;
+    outline: none;
+  }
+
+  .dispute-panel select {
+    padding: 10px 12px;
+    background: #fafbff;
+  }
+
+  .dispute-panel textarea {
+    padding: 11px 12px;
+    resize: vertical;
+  }
+
+  .dispute-panel select:focus,
+  .dispute-panel textarea:focus {
+    border-color: #5c7cfa;
+    box-shadow: 0 0 0 4px rgba(92, 124, 250, 0.12);
+  }
+
+  .dispute-note {
+    margin: 0;
+    color: #60708b;
+    font-size: 13px;
+    line-height: 1.6;
   }
 
   .portrait-text {
